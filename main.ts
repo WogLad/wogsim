@@ -24,8 +24,12 @@ function process(): void {
         if (e.move != null) {
             e.move();
         }
-        e.ticksAlive++;
+        if (e.isLiving) {
+            e.ticksAlive++;
+        }
     });
+
+    // TODO: Draw the entities.
 
     requestAnimationFrame(process);
 }
