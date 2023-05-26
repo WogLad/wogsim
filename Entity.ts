@@ -2,6 +2,8 @@
  * The base class that all the entities inherit their components and behaviour from.
  */
 class Entity {
+    ticksAlive: number = 0;
+    
     isLiving: boolean;
     isMovable: boolean;
 

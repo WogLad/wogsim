@@ -1,6 +1,6 @@
 class Human extends Entity {
-    constructor(living: boolean, movable: boolean) {
-        super(living, movable);
+    constructor() {
+        super(true, true);
     }
 
     process: () => void = () => {
@@ -9,7 +9,7 @@ class Human extends Entity {
 
     move: (() => Vector2) | null = () => {
         // Code to calculate the new position of the entity goes here.
-        console.log(1);
+        // console.log(this.ticksAlive);
 
         return Vector2(0,0); // Return the entity's new position
     }
