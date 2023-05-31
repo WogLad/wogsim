@@ -23,35 +23,6 @@ canvas.onpointermove = (e) => {
     mousePos.y = e.clientY - rect.top;  //y position within the element.
 }
 
-// Tile types and their colors
-enum TileType {
-    GROUND = "#74663B",
-    WATER = "#005EB8"
-}
-
-class WorldTile {
-    type: TileType = TileType.GROUND; // TODO: Should be randomly decided using a noise function
-    entities: Entity[] = [];
-
-    /**
-     * Returns if the entity was successfully added to the tile or not
-     */
-    addEntity(e: Entity): boolean {
-        if ((this.entities.length + 1) > TILE_ENTITY_LIMIT) {
-            return false;
-        }
-        this.entities.push(e);
-        return true;
-    }
-
-    getColor(): string | null {
-        if (this.entities.length != 0) {
-            return this.entities[this.entities.length-1].color
-        }
-        return this.type;
-    }
-}
-
 // var entities: Entity[] = [];
 var world: WorldTile[][] = [];
 
@@ -63,7 +34,7 @@ function init(): void {
     for (var y = 0; y < Y_TILES; y++) {
         var row: WorldTile[] = [];
         for (var x = 0; x < X_TILES; x++) {
-            var tile: WorldTile = new WorldTile();
+            var tile: WorldTile = new WorldTile(x,y);
             if (Math.random() < 0.001) {
                 tile.addEntity(new Human());
             }

@@ -19,34 +19,6 @@ canvas.onpointermove = (e) => {
     mousePos.x = e.clientX - rect.left; //x position within the element.
     mousePos.y = e.clientY - rect.top; //y position within the element.
 };
-// Tile types and their colors
-var TileType;
-(function (TileType) {
-    TileType["GROUND"] = "#74663B";
-    TileType["WATER"] = "#005EB8";
-})(TileType || (TileType = {}));
-class WorldTile {
-    constructor() {
-        this.type = TileType.GROUND; // TODO: Should be randomly decided using a noise function
-        this.entities = [];
-    }
-    /**
-     * Returns if the entity was successfully added to the tile or not
-     */
-    addEntity(e) {
-        if ((this.entities.length + 1) > TILE_ENTITY_LIMIT) {
-            return false;
-        }
-        this.entities.push(e);
-        return true;
-    }
-    getColor() {
-        if (this.entities.length != 0) {
-            return this.entities[this.entities.length - 1].color;
-        }
-        return this.type;
-    }
-}
 // var entities: Entity[] = [];
 var world = [];
 function init() {
@@ -56,7 +28,7 @@ function init() {
     for (var y = 0; y < Y_TILES; y++) {
         var row = [];
         for (var x = 0; x < X_TILES; x++) {
-            var tile = new WorldTile();
+            var tile = new WorldTile(x, y);
             if (Math.random() < 0.001) {
                 tile.addEntity(new Human());
             }
