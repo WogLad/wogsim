@@ -35,7 +35,7 @@ function init(): void {
         var row: WorldTile[] = [];
         for (var x = 0; x < X_TILES; x++) {
             var tile: WorldTile = new WorldTile(x,y);
-            if (Math.random() < 0.001) {
+            if (Math.random() < 0.002 && tile.type != TileType.WATER && tile.type != TileType.DARK_WATER) {
                 tile.addEntity(new Human());
             }
             row.push(tile);
