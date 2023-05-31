@@ -10,6 +10,7 @@ enum TileType {
 class WorldTile {
     type: TileType | string = TileType.GROUND; // DONE: Should be randomly decided using a noise function
     entities: Entity[] = [];
+    // TODO: Add objects that exist on tiles such as wheat or trees
 
     constructor(x: number, y: number) {
         this.setTileType(x,y); // Sets the type of tile
@@ -49,6 +50,17 @@ class WorldTile {
             return false;
         }
         this.entities.push(e);
+        return true;
+    }
+
+    /**
+     * Returns if the entity was successfully removed from the tile or not
+     */
+    removeEntity(index: number): boolean {
+        var e: Entity[] = this.entities.splice(index, 1);
+        if (e.length == 0) {
+            return false;
+        }
         return true;
     }
 

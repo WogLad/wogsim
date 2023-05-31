@@ -9,6 +9,7 @@ var TileType;
     TileType["DARK_WATER"] = "#003399";
 })(TileType || (TileType = {}));
 class WorldTile {
+    // TODO: Add objects that exist on tiles such as wheat or trees
     constructor(x, y) {
         this.type = TileType.GROUND; // DONE: Should be randomly decided using a noise function
         this.entities = [];
@@ -47,6 +48,16 @@ class WorldTile {
             return false;
         }
         this.entities.push(e);
+        return true;
+    }
+    /**
+     * Returns if the entity was successfully removed from the tile or not
+     */
+    removeEntity(index) {
+        var e = this.entities.splice(index, 1);
+        if (e.length == 0) {
+            return false;
+        }
         return true;
     }
     getColor() {

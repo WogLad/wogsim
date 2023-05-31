@@ -12,6 +12,7 @@ const OUTLINE_THICKNESS = 2; // <DEPRECATED> Thickness of the lines that make up
 
 // WORLD PROPERTIES
 const TILE_ENTITY_LIMIT: number = 2;
+var MOVEMENT_DELAY: number = 20;
 
 canvas.height = CANVAS_HEIGHT;
 canvas.width = CANVAS_WIDTH;
@@ -47,15 +48,21 @@ function init(): void {
 init();
 
 // Main loop
-function process(): void {
+var ticks: number = 0;
+function mainProcess(): void {
     for (var y = 0; y < Y_TILES; y++) {
         for (var x = 0; x < X_TILES; x++) {
             var tile: WorldTile = world[y][x];
             // The base code that runs for every entity in the world
             tile.entities.forEach(e => {
                 e.process();
-                if (e.move != null) {
-                    e.move();
+                // Movement handler
+                if (e.move != null && ticks % MOVEMENT_DELAY == 0) {
+                    var direction: Vector2 = e.move(x,y);
+                    if (direction.x != 0 || direction.y != 0) {
+                        world[y+direction.y][x+direction.x].addEntity(e);
+                        tile.removeEntity(tile.entities.indexOf(e)); // Removes the entity from the tile
+                    }
                 }
                 if (e.isLiving) {
                     e.ticksAlive++;
@@ -81,6 +88,10 @@ function process(): void {
     ctx.strokeStyle = "red";
     ctx.strokeRect(Math.floor(mousePos.x/TILE_SIZE)*TILE_SIZE, Math.floor(mousePos.y/TILE_SIZE)*TILE_SIZE, TILE_SIZE, TILE_SIZE);
 
-    requestAnimationFrame(process);
+    ticks++;
+    if (ticks == 10**9) {
+        ticks = 0;
+    }
+    requestAnimationFrame(mainProcess);
 }
-requestAnimationFrame(process);
+requestAnimationFrame(mainProcess);
