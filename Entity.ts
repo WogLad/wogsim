@@ -3,6 +3,7 @@
  */
 class Entity {
     ticksAlive: number = 0;
+    color: string;
     
     isLiving: boolean;
     isMovable: boolean;
@@ -10,9 +11,10 @@ class Entity {
     process: () => void = () => {}; // Called every frame
     move: (() => Vector2) | null = () => {return Vector2(0,0)}; // Called every frame to move the entity if possible
 
-    constructor(living: boolean, movable: boolean) {
+    constructor(living: boolean, movable: boolean, viewColor: string) {
         this.isLiving = living;
         this.isMovable = movable;
+        this.color = viewColor;
 
         if (!this.isMovable) {
             this.move = null;

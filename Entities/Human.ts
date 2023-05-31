@@ -1,6 +1,6 @@
 class Human extends Entity {
     constructor() {
-        super(true, true);
+        super(true, true, "#613f31");
     }
 
     process: () => void = () => {

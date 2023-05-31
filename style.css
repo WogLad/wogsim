@@ -4,13 +4,18 @@ body {
     font-family: 'Helvetica Neue';
 }
 
-#canvas {
+h1 {
+    font-family: menlo, 'Courier New';
+    text-align: center;
+}
+
+/* #canvas {
     width: 960px;
     height: 540px;
     max-width: 960px;
     max-height: 540px;
     border: 1px black solid;
-}
+} */
 
 #canvasDiv {
     width: fit-content;
