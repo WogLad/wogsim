@@ -2,6 +2,7 @@
  * The base class that all the entities inherit their components and behaviour from.
  */
 class Entity {
+    id: string = crypto.randomUUID();
     ticksAlive: number = 0;
     color: string;
     

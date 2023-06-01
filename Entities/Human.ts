@@ -13,18 +13,19 @@ class Human extends Entity {
         // DONE: Make the human walk towards the left.
         // TODO: Implement A* pathfinding for the humans to find food.
 
-        var newPos: Vector2 = Vector2(0,0);
+        var deviation: Vector2 = Vector2(0,0); // The change made to the current position of the entity
 
-        newPos.x = -1; // For left movement
+        deviation.x = 1;
+        // deviation.y = -1;
 
         // Prevents the entity from going out of bounds
-        if (currentX <= 0 || currentX >= (world[0].length-1)) {
-            newPos.x = 0;
+        if (currentX + deviation.x < 0 || currentX + deviation.x > (world[0].length-1)) {
+            deviation.x = 0;
         }
-        if (currentY <= 0 || currentY >= (world.length-1)) {
-            newPos.y = 0;
+        if (currentY + deviation.y < 0 || currentY + deviation.y > (world.length-1)) {
+            deviation.y = 0;
         }
 
-        return newPos; // Return the entity's new position
+        return deviation; // Return the entity's deviation
     }
 }

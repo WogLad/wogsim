@@ -4,6 +4,7 @@
  */
 class Entity {
     constructor(living, movable, viewColor) {
+        this.id = crypto.randomUUID();
         this.ticksAlive = 0;
         this.process = () => { }; // Called every frame
         this.move = (currentX, currentY) => { return Vector2(0, 0); }; // Called every frame to move the entity if possible

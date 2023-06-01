@@ -50,24 +50,31 @@ init();
 // Main loop
 var ticks: number = 0;
 function mainProcess(): void {
+    var entitiesProcessed: string[] = [];
     for (var y = 0; y < Y_TILES; y++) {
         for (var x = 0; x < X_TILES; x++) {
             var tile: WorldTile = world[y][x];
             // The base code that runs for every entity in the world
-            tile.entities.forEach(e => {
+            for (var e of tile.entities) {
+                if (entitiesProcessed.includes(e.id)) {
+                    continue;
+                }
                 e.process();
                 // Movement handler
                 if (e.move != null && ticks % MOVEMENT_DELAY == 0) {
                     var direction: Vector2 = e.move(x,y);
                     if (direction.x != 0 || direction.y != 0) {
-                        world[y+direction.y][x+direction.x].addEntity(e);
-                        tile.removeEntity(tile.entities.indexOf(e)); // Removes the entity from the tile
+                        var moveSuccess: boolean = world[y+direction.y][x+direction.x].addEntity(e);
+                        if (moveSuccess) {
+                            tile.removeEntity(tile.entities.indexOf(e)); // Removes the entity from the tile
+                        }
                     }
                 }
                 if (e.isLiving) {
                     e.ticksAlive++;
                 }
-            });
+                entitiesProcessed.push(e.id);
+            }
         }
     }
 
@@ -88,8 +95,9 @@ function mainProcess(): void {
     ctx.strokeStyle = "red";
     ctx.strokeRect(Math.floor(mousePos.x/TILE_SIZE)*TILE_SIZE, Math.floor(mousePos.y/TILE_SIZE)*TILE_SIZE, TILE_SIZE, TILE_SIZE);
 
+    // For the world ticks
     ticks++;
-    if (ticks == 10**9) {
+    if (ticks == 1000000000) {
         ticks = 0;
     }
     requestAnimationFrame(mainProcess);
