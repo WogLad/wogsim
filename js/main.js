@@ -94,12 +94,16 @@ function mainProcess() {
     for (var y = 0; y < Y_TILES; y++) {
         for (var x = 0; x < X_TILES; x++) {
             if (DEBUG_DRAW) {
-                if (world[y][x].canBeTraversed()) {
-                    ctx.fillStyle = "green";
+                if (world[y][x].entities.length != 0) { // For entities
+                    ctx.fillStyle = "#0066ff";
                     ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
                 }
-                else {
-                    ctx.fillStyle = "purple";
+                else if (world[y][x].canBeTraversed()) { // For walkable surfaces
+                    ctx.fillStyle = "#00d92f";
+                    ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                }
+                else { // For non-walkable surfaces
+                    ctx.fillStyle = "#d4002e";
                     ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
                 }
             }
