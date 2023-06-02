@@ -68,7 +68,7 @@ function init(): void {
 
 init();
 
-var DEBUG_DRAW = true;
+var DEBUG_DRAW = false;
 
 // Main loop
 var ticks: number = 0;

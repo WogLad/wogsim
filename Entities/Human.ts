@@ -31,7 +31,6 @@ class Human extends Entity {
             deviation.y = 0;
         }
 
-        // console.log(deviation);
         return deviation; // Return the entity's deviation
     }
 }
