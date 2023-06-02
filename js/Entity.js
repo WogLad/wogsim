@@ -18,6 +18,6 @@ class Entity {
     }
     moveTo(startPos, endPos) {
         //@ts-ignore
-        this.moveQueue = astar.search(aStarGrid, aStarGrid.grid[startPos.y][startPos.x], aStarGrid.grid[endPos.y][endPos.x]);
+        this.moveQueue = astar.search(aStarGrid, aStarGrid.grid[startPos.x][startPos.y], aStarGrid.grid[endPos.x][endPos.y]);
     }
 }

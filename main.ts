@@ -25,7 +25,7 @@ canvas.onpointermove = (e) => {
 }
 
 var entities: EntityData[] = [];
-var world: WorldTile[][] = [];
+var world: Map<string, WorldTile> = new Map<string, WorldTile>(); // The key will be the coords in the format {"x,y": WorldTile}
 var aStarGrid: any;
 
 function init(): void {
@@ -33,26 +33,27 @@ function init(): void {
     ctx.fillRect(0,0, CANVAS_WIDTH,CANVAS_HEIGHT);
 
     // Initialise the 2D world array
-    for (var y = 0; y < Y_TILES; y++) {
-        var row: WorldTile[] = [];
-        for (var x = 0; x < X_TILES; x++) {
+    for (var x = 0; x < X_TILES; x++) {
+        // var row: WorldTile[] = [];
+        for (var y = 0; y < Y_TILES; y++) {
             var tile: WorldTile = new WorldTile(x,y);
             if (Math.random() < 0.002 && tile.type != TileType.WATER && tile.type != TileType.DARK_WATER) {
                 var h: Human = new Human();
                 tile.addEntity(h);
                 entities.push({entity: h, pos: Vector2(x,y)}); // TODO: REMOVE THIS
             }
-            row.push(tile);
+            world.set(`${x},${y}`, tile);
+            // row.push(tile);
         }
-        world.push(row);
+        // world.push(row);
     }
 
     // Set up the A* Grid
     var gridInput: number[][] = [];
-    for (var y = 0; y < Y_TILES; y++) {
+    for (var x = 0; x < X_TILES; x++) {
         var inputRow: number[] = [];
-        for (var x = 0; x < X_TILES; x++) {
-            inputRow.push(Number(world[y][x].canBeTraversed()));
+        for (var y = 0; y < Y_TILES; y++) {
+            inputRow.push(Number((world.get(`${x},${y}`) as WorldTile).canBeTraversed()));
         }
         gridInput.push(inputRow);
     }
@@ -67,15 +68,15 @@ function init(): void {
 
 init();
 
-var DEBUG_DRAW = false;
+var DEBUG_DRAW = true;
 
 // Main loop
 var ticks: number = 0;
 function mainProcess(): void {
     var entitiesProcessed: string[] = [];
-    for (var y = 0; y < Y_TILES; y++) {
-        for (var x = 0; x < X_TILES; x++) {
-            var tile: WorldTile = world[y][x];
+    for (var x = 0; x < X_TILES; x++) {
+        for (var y = 0; y < Y_TILES; y++) {
+            var tile: WorldTile = world.get(`${x},${y}`) as WorldTile;
             // The base code that runs for every entity in the world
             for (var e of tile.entities) {
                 if (entitiesProcessed.includes(e.id)) {
@@ -86,7 +87,7 @@ function mainProcess(): void {
                 if (e.move != null && ticks % MOVEMENT_DELAY == 0) {
                     var direction: Vector2 = e.move(x,y);
                     if (direction.x != 0 || direction.y != 0) {
-                        var moveSuccess: boolean = world[y+direction.y][x+direction.x].addEntity(e);
+                        var moveSuccess: boolean = (world.get(`${x+direction.x},${y+direction.y}`) as WorldTile).addEntity(e);
                         if (moveSuccess) {
                             tile.removeEntity(tile.entities.indexOf(e)); // Removes the entity from the tile
                         }
@@ -103,14 +104,14 @@ function mainProcess(): void {
     // DONE: Draw the entities.
     ctx.fillStyle = CANVAS_BG_COLOR;
     ctx.fillRect(0,0, canvas.width,canvas.height);
-    for (var y = 0; y < Y_TILES; y++) {
-        for (var x = 0; x < X_TILES; x++) {
+    for (var x = 0; x < X_TILES; x++) {
+        for (var y = 0; y < Y_TILES; y++) {
             if (DEBUG_DRAW) {
-                if (world[y][x].entities.length != 0) { // For entities
+                if ((world.get(`${x},${y}`) as WorldTile).entities.length != 0) { // For entities
                     ctx.fillStyle = "#0066ff";
                     ctx.fillRect(x*TILE_SIZE,y*TILE_SIZE, TILE_SIZE,TILE_SIZE);
                 }
-                else if (world[y][x].canBeTraversed()) { // For walkable surfaces
+                else if ((world.get(`${x},${y}`) as WorldTile).canBeTraversed()) { // For walkable surfaces
                     ctx.fillStyle = "#00d92f";
                     ctx.fillRect(x*TILE_SIZE,y*TILE_SIZE, TILE_SIZE,TILE_SIZE);
                 }
@@ -120,10 +121,10 @@ function mainProcess(): void {
                 }
             }
             else {
-                if (world[y][x].getColor() == null) {
+                if ((world.get(`${x},${y}`) as WorldTile).getColor() == null) {
                     continue;
                 }
-                ctx.fillStyle = world[y][x].getColor() as string;
+                ctx.fillStyle = (world.get(`${x},${y}`) as WorldTile).getColor() as string;
                 ctx.fillRect(x*TILE_SIZE,y*TILE_SIZE, TILE_SIZE,TILE_SIZE);
             }
             

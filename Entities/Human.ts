@@ -24,10 +24,10 @@ class Human extends Entity {
         }
 
         // Prevents the entity from going out of bounds
-        if (currentX + deviation.x < 0 || currentX + deviation.x > (world[0].length-1)) {
+        if (currentX + deviation.x < 0 || currentX + deviation.x > (X_TILES-1)) {
             deviation.x = 0;
         }
-        if (currentY + deviation.y < 0 || currentY + deviation.y > (world.length-1)) {
+        if (currentY + deviation.y < 0 || currentY + deviation.y > (Y_TILES-1)) {
             deviation.y = 0;
         }
 
