@@ -51,14 +51,14 @@ function init() {
         gridInput.push(inputRow);
     }
     //@ts-ignore - as the Graph class is part of the JS code, not the TS code
-    aStarGrid = new Graph(gridInput /*, {diagonal: true}*/);
+    aStarGrid = new Graph(gridInput, { diagonal: true });
     // TODO: REMOVE OR IMPROVE THIS
     for (var e of entities) {
         e.entity.moveTo(Vector2(e.pos.x, e.pos.y), Vector2(63, e.pos.y));
     }
 }
 init();
-var DEBUG_DRAW = true;
+var DEBUG_DRAW = false;
 // Main loop
 var ticks = 0;
 function mainProcess() {

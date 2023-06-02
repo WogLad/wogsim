@@ -58,7 +58,7 @@ function init(): void {
         gridInput.push(inputRow);
     }
     //@ts-ignore - as the Graph class is part of the JS code, not the TS code
-    aStarGrid = new Graph(gridInput/*, {diagonal: true}*/);
+    aStarGrid = new Graph(gridInput, {diagonal: true});
 
     // TODO: REMOVE OR IMPROVE THIS
     for (var e of entities) {

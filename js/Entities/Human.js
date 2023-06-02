@@ -23,7 +23,6 @@ class Human extends Entity {
             if (currentY + deviation.y < 0 || currentY + deviation.y > (Y_TILES - 1)) {
                 deviation.y = 0;
             }
-            // console.log(deviation);
             return deviation; // Return the entity's deviation
         };
     }
