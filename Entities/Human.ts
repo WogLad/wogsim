@@ -11,16 +11,17 @@ class Human extends Entity {
         // Code to calculate the new position of the entity goes here.
         
         // DONE: Make the human walk towards the left.
-        // TODO: Implement A* pathfinding for the humans to find food.
+        // DONE: Implement A* pathfinding for the humans to find food.
 
         var deviation: Vector2 = Vector2(0,0); // The change made to the current position of the entity
-
-        // deviation.x = 1; // TODO: Change this to use a random movement function
 
         if (this.moveQueue.length > 0) {
             deviation.x = this.moveQueue[0].x - currentX;
             deviation.y = this.moveQueue[0].y - currentY;
             this.moveQueue.shift(); // Removes the first grid node after moving to it (for A*)
+        }
+        else {
+            this.moveTo(Vector2(currentX,currentY), this.getRandomPos()); // DONE: Change this to use a random movement function
         }
 
         // Prevents the entity from going out of bounds

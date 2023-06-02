@@ -28,18 +28,15 @@ function init() {
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     // Initialise the 2D world array
     for (var x = 0; x < X_TILES; x++) {
-        // var row: WorldTile[] = [];
         for (var y = 0; y < Y_TILES; y++) {
             var tile = new WorldTile(x, y);
             if (Math.random() < 0.002 && tile.type != TileType.WATER && tile.type != TileType.DARK_WATER) {
                 var h = new Human();
                 tile.addEntity(h);
-                entities.push({ entity: h, pos: Vector2(x, y) }); // TODO: REMOVE THIS
+                entities.push({ entity: h, pos: Vector2(x, y) });
             }
             world.set(`${x},${y}`, tile);
-            // row.push(tile);
         }
-        // world.push(row);
     }
     // Set up the A* Grid
     var gridInput = [];
@@ -52,10 +49,6 @@ function init() {
     }
     //@ts-ignore - as the Graph class is part of the JS code, not the TS code
     aStarGrid = new Graph(gridInput, { diagonal: true });
-    // TODO: REMOVE OR IMPROVE THIS
-    for (var e of entities) {
-        e.entity.moveTo(Vector2(e.pos.x, e.pos.y), Vector2(63, e.pos.y));
-    }
 }
 init();
 var DEBUG_DRAW = false;

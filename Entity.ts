@@ -28,4 +28,8 @@ class Entity {
         //@ts-ignore
         this.moveQueue = astar.search(aStarGrid, aStarGrid.grid[startPos.x][startPos.y], aStarGrid.grid[endPos.x][endPos.y]);
     }
+
+    getRandomPos(): Vector2 {
+        return Vector2(Math.floor(Math.random() * X_TILES), Math.floor(Math.random() * Y_TILES));
+    }
 }
