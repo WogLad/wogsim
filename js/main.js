@@ -20,8 +20,9 @@ canvas.onpointermove = (e) => {
     mousePos.x = e.clientX - rect.left; //x position within the element.
     mousePos.y = e.clientY - rect.top; //y position within the element.
 };
-// var entities: Entity[] = [];
+var entities = [];
 var world = [];
+var aStarGrid;
 function init() {
     ctx.fillStyle = CANVAS_BG_COLOR;
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
@@ -31,14 +32,32 @@ function init() {
         for (var x = 0; x < X_TILES; x++) {
             var tile = new WorldTile(x, y);
             if (Math.random() < 0.002 && tile.type != TileType.WATER && tile.type != TileType.DARK_WATER) {
-                tile.addEntity(new Human());
+                var h = new Human();
+                tile.addEntity(h);
+                entities.push({ entity: h, pos: Vector2(x, y) }); // TODO: REMOVE THIS
             }
             row.push(tile);
         }
         world.push(row);
     }
+    // Set up the A* Grid
+    var gridInput = [];
+    for (var y = 0; y < Y_TILES; y++) {
+        var inputRow = [];
+        for (var x = 0; x < X_TILES; x++) {
+            inputRow.push(Number(world[y][x].canBeTraversed()));
+        }
+        gridInput.push(inputRow);
+    }
+    //@ts-ignore - as the Graph class is part of the JS code, not the TS code
+    aStarGrid = new Graph(gridInput /*, {diagonal: true}*/);
+    // TODO: REMOVE OR IMPROVE THIS
+    for (var e of entities) {
+        e.entity.moveTo(Vector2(e.pos.x, e.pos.y), Vector2(63, e.pos.y));
+    }
 }
 init();
+var DEBUG_DRAW = false;
 // Main loop
 var ticks = 0;
 function mainProcess() {
@@ -74,11 +93,31 @@ function mainProcess() {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     for (var y = 0; y < Y_TILES; y++) {
         for (var x = 0; x < X_TILES; x++) {
-            if (world[y][x].getColor() == null) {
-                continue;
+            if (DEBUG_DRAW) {
+                if (world[y][x].canBeTraversed()) {
+                    ctx.fillStyle = "green";
+                    ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                }
+                else {
+                    ctx.fillStyle = "purple";
+                    ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                }
             }
-            ctx.fillStyle = world[y][x].getColor();
-            ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            else {
+                if (world[y][x].getColor() == null) {
+                    continue;
+                }
+                ctx.fillStyle = world[y][x].getColor();
+                ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            }
+        }
+    }
+    if (DEBUG_DRAW) {
+        for (var ent of entities) {
+            for (var move of ent.entity.moveQueue) {
+                ctx.fillStyle = "yellow";
+                ctx.fillRect(move.x * TILE_SIZE, move.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            }
         }
     }
     // Draws a red box around the mouse onto the TileMap that follows the mouse

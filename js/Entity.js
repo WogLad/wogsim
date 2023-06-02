@@ -6,6 +6,7 @@ class Entity {
     constructor(living, movable, viewColor) {
         this.id = crypto.randomUUID();
         this.ticksAlive = 0;
+        this.moveQueue = [];
         this.process = () => { }; // Called every frame
         this.move = (currentX, currentY) => { return Vector2(0, 0); }; // Called every frame to move the entity if possible
         this.isLiving = living;
@@ -14,5 +15,9 @@ class Entity {
         if (!this.isMovable) {
             this.move = null;
         }
+    }
+    moveTo(startPos, endPos) {
+        //@ts-ignore
+        this.moveQueue = astar.search(aStarGrid, aStarGrid.grid[startPos.y][startPos.x], aStarGrid.grid[endPos.y][endPos.x]);
     }
 }

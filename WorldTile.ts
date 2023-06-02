@@ -8,6 +8,7 @@ enum TileType {
 }
 
 class WorldTile {
+    pos: Vector2 = Vector2(0,0); 
     type: TileType | string = TileType.GROUND; // DONE: Should be randomly decided using a noise function
     entities: Entity[] = [];
     // TODO: Add objects that exist on tiles such as wheat or trees
@@ -20,6 +21,8 @@ class WorldTile {
      * Assigns a random tile type to the tile
      */
     setTileType(x: number, y: number) {
+        this.pos = Vector2(x,y);
+
         const noiseFactor: number = 0.07; // Multiply the coords with this to get desired noise values
         //@ts-ignore
         var noiseVal: number = perlin.get(x*noiseFactor, y*noiseFactor);
@@ -69,5 +72,12 @@ class WorldTile {
             return this.entities[this.entities.length-1].color
         }
         return this.type;
+    }
+
+    canBeTraversed(): boolean {
+        if ([TileType.WATER, TileType.DARK_WATER].includes(this.type as TileType)) {
+            return false;
+        }
+        return true;
     }
 }

@@ -11,6 +11,7 @@ var TileType;
 class WorldTile {
     // TODO: Add objects that exist on tiles such as wheat or trees
     constructor(x, y) {
+        this.pos = Vector2(0, 0);
         this.type = TileType.GROUND; // DONE: Should be randomly decided using a noise function
         this.entities = [];
         this.setTileType(x, y); // Sets the type of tile
@@ -19,6 +20,7 @@ class WorldTile {
      * Assigns a random tile type to the tile
      */
     setTileType(x, y) {
+        this.pos = Vector2(x, y);
         const noiseFactor = 0.07; // Multiply the coords with this to get desired noise values
         //@ts-ignore
         var noiseVal = perlin.get(x * noiseFactor, y * noiseFactor);
@@ -65,5 +67,11 @@ class WorldTile {
             return this.entities[this.entities.length - 1].color;
         }
         return this.type;
+    }
+    canBeTraversed() {
+        if ([TileType.WATER, TileType.DARK_WATER].includes(this.type)) {
+            return false;
+        }
+        return true;
     }
 }
