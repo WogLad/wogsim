@@ -12,6 +12,7 @@ const OUTLINE_THICKNESS = 2; // <DEPRECATED> Thickness of the lines that make up
 
 // WORLD PROPERTIES
 const TILE_ENTITY_LIMIT: number = 2;
+const TILE_ITEM_LIMIT: number = 10;
 var MOVEMENT_DELAY: number = 20;
 
 canvas.height = CANVAS_HEIGHT;

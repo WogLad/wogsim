@@ -11,6 +11,7 @@ const Y_TILES = Math.floor(CANVAS_HEIGHT / TILE_SIZE);
 const OUTLINE_THICKNESS = 2; // <DEPRECATED> Thickness of the lines that make up the box surrounding the mouse
 // WORLD PROPERTIES
 const TILE_ENTITY_LIMIT = 2;
+const TILE_ITEM_LIMIT = 10;
 var MOVEMENT_DELAY = 20;
 canvas.height = CANVAS_HEIGHT;
 canvas.width = CANVAS_WIDTH;

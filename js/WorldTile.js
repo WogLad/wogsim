@@ -9,11 +9,11 @@ var TileType;
     TileType["DARK_WATER"] = "#003399";
 })(TileType || (TileType = {}));
 class WorldTile {
-    // TODO: Add objects that exist on tiles such as wheat or trees
     constructor(x, y) {
         this.pos = Vector2(0, 0);
         this.type = TileType.GROUND; // DONE: Should be randomly decided using a noise function
         this.entities = [];
+        this.items = []; // TODO: Add objects that exist on tiles such as wheat or trees
         this.setTileType(x, y); // Sets the type of tile
     }
     /**

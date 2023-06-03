@@ -11,7 +11,7 @@ class WorldTile {
     pos: Vector2 = Vector2(0,0); 
     type: TileType | string = TileType.GROUND; // DONE: Should be randomly decided using a noise function
     entities: Entity[] = [];
-    // TODO: Add objects that exist on tiles such as wheat or trees
+    items: Item[] = []; // TODO: Add objects that exist on tiles such as wheat or trees
 
     constructor(x: number, y: number) {
         this.setTileType(x,y); // Sets the type of tile
