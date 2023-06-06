@@ -18,11 +18,16 @@ var MOVEMENT_DELAY: number = 20;
 canvas.height = CANVAS_HEIGHT;
 canvas.width = CANVAS_WIDTH;
 
+var tileInspectorDiv = document.getElementById("tileInspectorDiv");
+
 var mousePos = {x:0, y:0};
 canvas.onpointermove = (e) => {
     var rect = (e.target as HTMLCanvasElement).getBoundingClientRect();
     mousePos.x = e.clientX - rect.left; //x position within the element.
     mousePos.y = e.clientY - rect.top;  //y position within the element.
+}
+canvas.onclick = (e) => {
+    (tileInspectorDiv as HTMLDivElement).innerHTML = world.get(`${Math.floor(mousePos.x/TILE_SIZE)},${Math.floor(mousePos.y/TILE_SIZE)}`)?.getTileInspectorInfoDiv().innerHTML as string;
 }
 
 var entities: EntityData[] = [];

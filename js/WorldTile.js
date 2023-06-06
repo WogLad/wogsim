@@ -16,6 +16,16 @@ class WorldTile {
         this.items = []; // TODO: Add objects that exist on tiles such as wheat or trees
         this.setTileType(x, y); // Sets the type of tile
     }
+    getTileInspectorInfoDiv() {
+        var inspectorText = "";
+        inspectorText += `pos: ${this.pos.x}, ${this.pos.y}<br>`;
+        inspectorText += `type: <br>`; // TODO: Fix this to show the tile type as a string
+        inspectorText += `entity_count: ${this.entities.length}<br>`;
+        inspectorText += `item_count: ${this.items.length}`;
+        var div = document.createElement("div");
+        div.innerHTML = inspectorText;
+        return div;
+    }
     /**
      * Assigns a random tile type to the tile
      */

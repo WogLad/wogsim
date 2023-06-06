@@ -15,11 +15,16 @@ const TILE_ITEM_LIMIT = 10;
 var MOVEMENT_DELAY = 20;
 canvas.height = CANVAS_HEIGHT;
 canvas.width = CANVAS_WIDTH;
+var tileInspectorDiv = document.getElementById("tileInspectorDiv");
 var mousePos = { x: 0, y: 0 };
 canvas.onpointermove = (e) => {
     var rect = e.target.getBoundingClientRect();
     mousePos.x = e.clientX - rect.left; //x position within the element.
     mousePos.y = e.clientY - rect.top; //y position within the element.
+};
+canvas.onclick = (e) => {
+    var _a;
+    tileInspectorDiv.innerHTML = (_a = world.get(`${Math.floor(mousePos.x / TILE_SIZE)},${Math.floor(mousePos.y / TILE_SIZE)}`)) === null || _a === void 0 ? void 0 : _a.getTileInspectorInfoDiv().innerHTML;
 };
 var entities = [];
 var world = new Map(); // The key will be the coords in the format {"x,y": WorldTile}
