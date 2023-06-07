@@ -21,3 +21,10 @@ h1 {
     width: fit-content;
     margin: auto;
 }
+
+button {
+    padding: 5px 10px;
+    border-radius: 5px;
+    border: none;
+    filter: drop-shadow(0px 0px 5px white);
+}

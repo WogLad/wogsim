@@ -11,6 +11,7 @@ const Y_TILES: number = Math.floor(CANVAS_HEIGHT/TILE_SIZE);
 const OUTLINE_THICKNESS = 2; // <DEPRECATED> Thickness of the lines that make up the box surrounding the mouse
 
 // WORLD PROPERTIES
+var PAUSED: boolean = false;
 const TILE_ENTITY_LIMIT: number = 2;
 const TILE_ITEM_LIMIT: number = 10;
 var MOVEMENT_DELAY: number = 20;
@@ -25,9 +26,6 @@ canvas.onpointermove = (e) => {
     var rect = (e.target as HTMLCanvasElement).getBoundingClientRect();
     mousePos.x = e.clientX - rect.left; //x position within the element.
     mousePos.y = e.clientY - rect.top;  //y position within the element.
-}
-canvas.onclick = (e) => {
-    (tileInspectorDiv as HTMLDivElement).innerHTML = world.get(`${Math.floor(mousePos.x/TILE_SIZE)},${Math.floor(mousePos.y/TILE_SIZE)}`)?.getTileInspectorInfoDiv().innerHTML as string;
 }
 
 var entities: EntityData[] = [];
@@ -71,30 +69,32 @@ var DEBUG_DRAW = false;
 // Main loop
 var ticks: number = 0;
 function mainProcess(): void {
-    var entitiesProcessed: string[] = [];
-    for (var x = 0; x < X_TILES; x++) {
-        for (var y = 0; y < Y_TILES; y++) {
-            var tile: WorldTile = world.get(`${x},${y}`) as WorldTile;
-            // The base code that runs for every entity in the world
-            for (var e of tile.entities) {
-                if (entitiesProcessed.includes(e.id)) {
-                    continue;
-                }
-                e.process();
-                // Movement handler
-                if (e.move != null && ticks % MOVEMENT_DELAY == 0) {
-                    var direction: Vector2 = e.move(x,y);
-                    if (direction.x != 0 || direction.y != 0) {
-                        var moveSuccess: boolean = (world.get(`${x+direction.x},${y+direction.y}`) as WorldTile).addEntity(e);
-                        if (moveSuccess) {
-                            tile.removeEntity(tile.entities.indexOf(e)); // Removes the entity from the tile
+    if (!PAUSED) {
+        var entitiesProcessed: string[] = [];
+        for (var x = 0; x < X_TILES; x++) {
+            for (var y = 0; y < Y_TILES; y++) {
+                var tile: WorldTile = world.get(`${x},${y}`) as WorldTile;
+                // The base code that runs for every entity in the world
+                for (var e of tile.entities) {
+                    if (entitiesProcessed.includes(e.id)) {
+                        continue;
+                    }
+                    e.process();
+                    // Movement handler
+                    if (e.move != null && ticks % MOVEMENT_DELAY == 0) {
+                        var direction: Vector2 = e.move(x,y);
+                        if (direction.x != 0 || direction.y != 0) {
+                            var moveSuccess: boolean = (world.get(`${x+direction.x},${y+direction.y}`) as WorldTile).addEntity(e);
+                            if (moveSuccess) {
+                                tile.removeEntity(tile.entities.indexOf(e)); // Removes the entity from the tile
+                            }
                         }
                     }
+                    if (e.isLiving) {
+                        e.ticksAlive++;
+                    }
+                    entitiesProcessed.push(e.id);
                 }
-                if (e.isLiving) {
-                    e.ticksAlive++;
-                }
-                entitiesProcessed.push(e.id);
             }
         }
     }
@@ -143,9 +143,11 @@ function mainProcess(): void {
     ctx.strokeRect(Math.floor(mousePos.x/TILE_SIZE)*TILE_SIZE, Math.floor(mousePos.y/TILE_SIZE)*TILE_SIZE, TILE_SIZE, TILE_SIZE);
 
     // For the world ticks
-    ticks++;
-    if (ticks == 1000000000) {
-        ticks = 0;
+    if (!PAUSED) {
+        ticks++;
+        if (ticks == 1000000000) {
+            ticks = 0;
+        }
     }
     requestAnimationFrame(mainProcess);
 }
