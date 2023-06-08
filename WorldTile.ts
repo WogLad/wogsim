@@ -15,6 +15,11 @@ class WorldTile {
 
     constructor(x: number, y: number) {
         this.setTileType(x,y); // Sets the type of tile
+        
+        // 20% chance to add an apple to the tile
+        if (Math.random() < 0.2) {
+            this.items.push(new Item("Apple"));
+        }
     }
 
     getTileInspectorInfoDiv(): HTMLDivElement {

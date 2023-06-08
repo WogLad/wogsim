@@ -105,6 +105,9 @@ function mainProcess() {
                     ctx.fillStyle = "#d4002e";
                     ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
                 }
+                // Draws the no. of items in the tile
+                ctx.fillStyle = "black";
+                ctx.fillText(world.get(`${x},${y}`).items.length.toString(), (x * TILE_SIZE) + (TILE_SIZE / 4), (y * TILE_SIZE) + (TILE_SIZE / 1.5));
             }
             else {
                 if (world.get(`${x},${y}`).getColor() == null) {

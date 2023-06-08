@@ -15,6 +15,10 @@ class WorldTile {
         this.entities = [];
         this.items = []; // TODO: Add objects that exist on tiles such as wheat or trees
         this.setTileType(x, y); // Sets the type of tile
+        // 20% chance to add an apple to the tile
+        if (Math.random() < 0.2) {
+            this.items.push(new Item("Apple"));
+        }
     }
     getTileInspectorInfoDiv() {
         var inspectorText = "";
