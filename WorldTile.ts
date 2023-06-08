@@ -12,6 +12,7 @@ class WorldTile {
     type: TileType | string = TileType.GROUND; // DONE: Should be randomly decided using a noise function
     entities: Entity[] = [];
     items: Item[] = []; // TODO: Add objects that exist on tiles such as wheat or trees
+    worldObjects: WorldObject[] = [];
 
     constructor(x: number, y: number) {
         this.setTileType(x,y); // Sets the type of tile
@@ -27,7 +28,8 @@ class WorldTile {
         inspectorText += `pos: ${this.pos.x}, ${this.pos.y}<br>`;
         inspectorText += `type: <br>`; // TODO: Fix this to show the tile type as a string
         inspectorText += `entity_count: ${this.entities.length}<br>`;
-        inspectorText += `item_count: ${this.items.length}`;
+        inspectorText += `item_count: ${this.items.length}<br>`;
+        inspectorText += `world_object_count: ${this.worldObjects.length}`;
 
         var div = document.createElement("div");
         div.innerHTML = inspectorText;
@@ -45,6 +47,9 @@ class WorldTile {
         var noiseVal: number = perlin.get(x*noiseFactor, y*noiseFactor);
         if (noiseVal >= 0.15) {
             this.type = TileType.DARK_GRASS;
+            if (noiseVal > 0.4) {
+                this.worldObjects.push(new WorldObject("tree"));
+            }
         }
         else if (noiseVal < 0.15 && noiseVal >= 0) {
             this.type = TileType.GRASS;
@@ -55,7 +60,7 @@ class WorldTile {
         else if (noiseVal < -0.25 && noiseVal >= -0.35) {
             this.type = TileType.WATER;
         }
-        else if (noiseVal < 0.35) {
+        else if (noiseVal < -0.35) {
             this.type = TileType.DARK_WATER;
         }
         // var w = 255*noiseVal;

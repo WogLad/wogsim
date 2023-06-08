@@ -26,6 +26,12 @@ canvas.onpointermove = (e) => {
 var entities = [];
 var world = new Map(); // The key will be the coords in the format {"x,y": WorldTile}
 var aStarGrid;
+var sprites = new Map();
+function getImgElement(src) {
+    var el = document.createElement("img");
+    el.src = src;
+    return el;
+}
 function init() {
     ctx.fillStyle = CANVAS_BG_COLOR;
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
@@ -52,6 +58,8 @@ function init() {
     }
     //@ts-ignore - as the Graph class is part of the JS code, not the TS code
     aStarGrid = new Graph(gridInput, { diagonal: true });
+    // Load in all the images
+    sprites.set("tree", getImgElement("img/tree.png"));
 }
 init();
 var DEBUG_DRAW = false;
@@ -92,12 +100,17 @@ function mainProcess() {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     for (var x = 0; x < X_TILES; x++) {
         for (var y = 0; y < Y_TILES; y++) {
+            var worldTile = world.get(`${x},${y}`);
             if (DEBUG_DRAW) {
-                if (world.get(`${x},${y}`).entities.length != 0) { // For entities
+                if (worldTile.entities.length != 0) { // For entities
                     ctx.fillStyle = "#0066ff";
                     ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
                 }
-                else if (world.get(`${x},${y}`).canBeTraversed()) { // For walkable surfaces
+                else if (worldTile.worldObjects.length != 0) {
+                    ctx.fillStyle = "gray";
+                    ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                }
+                else if (worldTile.canBeTraversed()) { // For walkable surfaces
                     ctx.fillStyle = "#00d92f";
                     ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
                 }
@@ -107,14 +120,17 @@ function mainProcess() {
                 }
                 // Draws the no. of items in the tile
                 ctx.fillStyle = "black";
-                ctx.fillText(world.get(`${x},${y}`).items.length.toString(), (x * TILE_SIZE) + (TILE_SIZE / 4), (y * TILE_SIZE) + (TILE_SIZE / 1.5));
+                ctx.fillText(worldTile.items.length.toString(), (x * TILE_SIZE) + (TILE_SIZE / 4), (y * TILE_SIZE) + (TILE_SIZE / 1.5));
             }
             else {
-                if (world.get(`${x},${y}`).getColor() == null) {
+                if (worldTile.getColor() == null) {
                     continue;
                 }
-                ctx.fillStyle = world.get(`${x},${y}`).getColor();
+                ctx.fillStyle = worldTile.getColor();
                 ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                if (worldTile.worldObjects.length > 0) {
+                    ctx.drawImage(sprites.get(worldTile.worldObjects[worldTile.worldObjects.length - 1].name), x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                }
             }
         }
     }
