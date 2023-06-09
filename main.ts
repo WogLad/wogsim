@@ -14,7 +14,8 @@ const OUTLINE_THICKNESS = 2; // <DEPRECATED> Thickness of the lines that make up
 var PAUSED: boolean = false;
 const TILE_ENTITY_LIMIT: number = 2;
 const TILE_ITEM_LIMIT: number = 10;
-var MOVEMENT_DELAY: number = 10;
+var MOVEMENT_DELAY: number = 15;
+const INVENTORY_MAX_CAPACITY: number = 20;
 
 canvas.height = CANVAS_HEIGHT;
 canvas.width = CANVAS_WIDTH;
@@ -154,6 +155,7 @@ function mainProcess(): void {
                     ctx.fillText(topEntity.professionLetter, (x*TILE_SIZE)+(TILE_SIZE/2), (y*TILE_SIZE)+(TILE_SIZE/1.4));
                 }
 
+                // Draws the sprites of structures and objects
                 if (worldTile.worldObjects.length > 0) {
                     ctx.filter = "drop-shadow(2px 2px 2.5px black)";
                     ctx.drawImage(sprites.get(worldTile.worldObjects[worldTile.worldObjects.length-1].name) as HTMLImageElement, x*TILE_SIZE, y*TILE_SIZE, TILE_SIZE, TILE_SIZE);

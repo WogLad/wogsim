@@ -13,7 +13,8 @@ const OUTLINE_THICKNESS = 2; // <DEPRECATED> Thickness of the lines that make up
 var PAUSED = false;
 const TILE_ENTITY_LIMIT = 2;
 const TILE_ITEM_LIMIT = 10;
-var MOVEMENT_DELAY = 10;
+var MOVEMENT_DELAY = 15;
+const INVENTORY_MAX_CAPACITY = 20;
 canvas.height = CANVAS_HEIGHT;
 canvas.width = CANVAS_WIDTH;
 var tileInspectorDiv = document.getElementById("tileInspectorDiv");
@@ -137,6 +138,7 @@ function mainProcess() {
                     ctx.font = "10px";
                     ctx.fillText(topEntity.professionLetter, (x * TILE_SIZE) + (TILE_SIZE / 2), (y * TILE_SIZE) + (TILE_SIZE / 1.4));
                 }
+                // Draws the sprites of structures and objects
                 if (worldTile.worldObjects.length > 0) {
                     ctx.filter = "drop-shadow(2px 2px 2.5px black)";
                     ctx.drawImage(sprites.get(worldTile.worldObjects[worldTile.worldObjects.length - 1].name), x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);

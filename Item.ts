@@ -5,3 +5,9 @@ class Item {
         this.name = name;
     }
 }
+
+class Tool extends Item {
+    constructor(name: string) {
+        super(name);
+    }
+}

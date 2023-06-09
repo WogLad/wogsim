@@ -10,6 +10,7 @@ class Entity {
     isMovable: boolean;
 
     moveQueue: GridNode[] = [];
+    inventory: Item[] = [];
 
     process: () => void = () => {}; // Called every frame
     move: ((currentX: number, currentY: number) => Vector2) | null = (currentX: number, currentY: number) => {return Vector2(0,0)}; // Called every frame to move the entity if possible
@@ -31,5 +32,15 @@ class Entity {
 
     getRandomPos(): Vector2 {
         return Vector2(Math.floor(Math.random() * X_TILES), Math.floor(Math.random() * Y_TILES));
+    }
+
+    addToInventory(item: Item, count: number = 1): boolean {
+        if (this.inventory.length >= INVENTORY_MAX_CAPACITY) {
+            return false;
+        }
+        for (var i = 0; i < count; i++) {
+            this.inventory.push(item);
+        }
+        return true;
     }
 }

@@ -4,3 +4,8 @@ class Item {
         this.name = name;
     }
 }
+class Tool extends Item {
+    constructor(name) {
+        super(name);
+    }
+}
