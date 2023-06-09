@@ -40,6 +40,7 @@ function getImgElement(src: string): HTMLImageElement {
 }
 
 function init(): void {
+    ctx.textAlign = "center";
     ctx.imageSmoothingEnabled = false;
     ctx.fillStyle = CANVAS_BG_COLOR;
     ctx.fillRect(0,0, CANVAS_WIDTH,CANVAS_HEIGHT);
@@ -149,7 +150,8 @@ function mainProcess(): void {
                 var topEntity: Entity = worldTile.entities[worldTile.entities.length-1];
                 if (topEntity instanceof Human && topEntity.professionLetter != "") {
                     ctx.fillStyle = "black";
-                    ctx.fillText(topEntity.professionLetter, (x*TILE_SIZE)+(TILE_SIZE/4), (y*TILE_SIZE)+(TILE_SIZE/1.5));
+                    ctx.font = "10px";
+                    ctx.fillText(topEntity.professionLetter, (x*TILE_SIZE)+(TILE_SIZE/2), (y*TILE_SIZE)+(TILE_SIZE/1.4));
                 }
 
                 if (worldTile.worldObjects.length > 0) {
