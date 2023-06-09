@@ -40,6 +40,7 @@ function getImgElement(src: string): HTMLImageElement {
 }
 
 function init(): void {
+    ctx.imageSmoothingEnabled = false;
     ctx.fillStyle = CANVAS_BG_COLOR;
     ctx.fillRect(0,0, CANVAS_WIDTH,CANVAS_HEIGHT);
 
@@ -145,7 +146,9 @@ function mainProcess(): void {
                 ctx.fillRect(x*TILE_SIZE,y*TILE_SIZE, TILE_SIZE,TILE_SIZE);
 
                 if (worldTile.worldObjects.length > 0) {
+                    ctx.filter = "drop-shadow(2px 2px 2.5px black)";
                     ctx.drawImage(sprites.get(worldTile.worldObjects[worldTile.worldObjects.length-1].name) as HTMLImageElement, x*TILE_SIZE, y*TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                    ctx.filter = "none";
                 }
             }
             
