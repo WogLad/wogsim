@@ -139,7 +139,7 @@ function mainProcess(): void {
                 // TODO: Make a checbox UI to toggle the below code on/off
                 // Draws the no. of items in the tile
                 ctx.fillStyle = "black";
-                ctx.fillText(worldTile.items.length.toString(), (x*TILE_SIZE)+(TILE_SIZE/4), (y*TILE_SIZE)+(TILE_SIZE/1.5));
+                ctx.fillText(worldTile.items.length.toString(), (x*TILE_SIZE)+(TILE_SIZE/2), (y*TILE_SIZE)+(TILE_SIZE/1.5));
             }
             else {
                 if (worldTile.getColor() == null) {
