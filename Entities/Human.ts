@@ -1,6 +1,10 @@
 class Human extends Entity {
-    constructor() {
+    /** The letter that is displayed on the human to denote its assigned profession */
+    professionLetter: string;
+
+    constructor(professionLetter: string) {
         super(true, true, "red");
+        this.professionLetter = professionLetter;
     }
 
     process: () => void = () => {

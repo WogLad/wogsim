@@ -13,7 +13,7 @@ const OUTLINE_THICKNESS = 2; // <DEPRECATED> Thickness of the lines that make up
 var PAUSED = false;
 const TILE_ENTITY_LIMIT = 2;
 const TILE_ITEM_LIMIT = 10;
-var MOVEMENT_DELAY = 20;
+var MOVEMENT_DELAY = 10;
 canvas.height = CANVAS_HEIGHT;
 canvas.width = CANVAS_WIDTH;
 var tileInspectorDiv = document.getElementById("tileInspectorDiv");
@@ -41,7 +41,7 @@ function init() {
         for (var y = 0; y < Y_TILES; y++) {
             var tile = new WorldTile(x, y);
             if (Math.random() < 0.002 && tile.type != TileType.WATER && tile.type != TileType.DARK_WATER) {
-                var h = new Human();
+                var h = new Woodcutter();
                 tile.addEntity(h);
                 entities.push({ entity: h, pos: Vector2(x, y) });
             }
@@ -119,6 +119,7 @@ function mainProcess() {
                     ctx.fillStyle = "#d4002e";
                     ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
                 }
+                // TODO: Make a checbox UI to toggle the below code on/off
                 // Draws the no. of items in the tile
                 ctx.fillStyle = "black";
                 ctx.fillText(worldTile.items.length.toString(), (x * TILE_SIZE) + (TILE_SIZE / 4), (y * TILE_SIZE) + (TILE_SIZE / 1.5));
@@ -129,6 +130,11 @@ function mainProcess() {
                 }
                 ctx.fillStyle = worldTile.getColor();
                 ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                var topEntity = worldTile.entities[worldTile.entities.length - 1];
+                if (topEntity instanceof Human && topEntity.professionLetter != "") {
+                    ctx.fillStyle = "black";
+                    ctx.fillText(topEntity.professionLetter, (x * TILE_SIZE) + (TILE_SIZE / 4), (y * TILE_SIZE) + (TILE_SIZE / 1.5));
+                }
                 if (worldTile.worldObjects.length > 0) {
                     ctx.filter = "drop-shadow(2px 2px 2.5px black)";
                     ctx.drawImage(sprites.get(worldTile.worldObjects[worldTile.worldObjects.length - 1].name), x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);

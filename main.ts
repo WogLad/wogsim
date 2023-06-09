@@ -14,7 +14,7 @@ const OUTLINE_THICKNESS = 2; // <DEPRECATED> Thickness of the lines that make up
 var PAUSED: boolean = false;
 const TILE_ENTITY_LIMIT: number = 2;
 const TILE_ITEM_LIMIT: number = 10;
-var MOVEMENT_DELAY: number = 20;
+var MOVEMENT_DELAY: number = 10;
 
 canvas.height = CANVAS_HEIGHT;
 canvas.width = CANVAS_WIDTH;
@@ -49,7 +49,7 @@ function init(): void {
         for (var y = 0; y < Y_TILES; y++) {
             var tile: WorldTile = new WorldTile(x,y);
             if (Math.random() < 0.002 && tile.type != TileType.WATER && tile.type != TileType.DARK_WATER) {
-                var h: Human = new Human();
+                var h: Human = new Woodcutter();
                 tile.addEntity(h);
                 entities.push({entity: h, pos: Vector2(x,y)});
             }
@@ -134,6 +134,7 @@ function mainProcess(): void {
                     ctx.fillRect(x*TILE_SIZE,y*TILE_SIZE, TILE_SIZE,TILE_SIZE);
                 }
 
+                // TODO: Make a checbox UI to toggle the below code on/off
                 // Draws the no. of items in the tile
                 ctx.fillStyle = "black";
                 ctx.fillText(worldTile.items.length.toString(), (x*TILE_SIZE)+(TILE_SIZE/4), (y*TILE_SIZE)+(TILE_SIZE/1.5));
@@ -144,6 +145,12 @@ function mainProcess(): void {
                 }
                 ctx.fillStyle = worldTile.getColor() as string;
                 ctx.fillRect(x*TILE_SIZE,y*TILE_SIZE, TILE_SIZE,TILE_SIZE);
+
+                var topEntity: Entity = worldTile.entities[worldTile.entities.length-1];
+                if (topEntity instanceof Human && topEntity.professionLetter != "") {
+                    ctx.fillStyle = "black";
+                    ctx.fillText(topEntity.professionLetter, (x*TILE_SIZE)+(TILE_SIZE/4), (y*TILE_SIZE)+(TILE_SIZE/1.5));
+                }
 
                 if (worldTile.worldObjects.length > 0) {
                     ctx.filter = "drop-shadow(2px 2px 2.5px black)";

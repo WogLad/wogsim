@@ -1,6 +1,6 @@
 "use strict";
 class Human extends Entity {
-    constructor() {
+    constructor(professionLetter) {
         super(true, true, "red");
         this.process = () => {
             // Code to be ran every frame goes here.
@@ -27,5 +27,6 @@ class Human extends Entity {
             }
             return deviation; // Return the entity's deviation
         };
+        this.professionLetter = professionLetter;
     }
 }
