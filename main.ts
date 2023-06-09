@@ -1,5 +1,5 @@
 var canvas: HTMLCanvasElement = document.getElementById("canvas") as HTMLCanvasElement;
-var ctx: CanvasRenderingContext2D = canvas.getContext("2d") as CanvasRenderingContext2D;
+var ctx: CanvasRenderingContext2D = canvas.getContext("2d", { alpha: false }) as CanvasRenderingContext2D;
 
 // CANVAS PROPERTIES
 const CANVAS_WIDTH: number = 960;
@@ -113,8 +113,7 @@ function mainProcess(): void {
     }
 
     // DONE: Draw the entities.
-    ctx.fillStyle = CANVAS_BG_COLOR;
-    ctx.fillRect(0,0, canvas.width,canvas.height);
+    ctx.clearRect(0,0, CANVAS_WIDTH,CANVAS_HEIGHT);
     for (var x = 0; x < X_TILES; x++) {
         for (var y = 0; y < Y_TILES; y++) {
             var worldTile: WorldTile = world.get(`${x},${y}`) as WorldTile;
@@ -142,10 +141,11 @@ function mainProcess(): void {
                 ctx.fillText(worldTile.items.length.toString(), (x*TILE_SIZE)+(TILE_SIZE/2), (y*TILE_SIZE)+(TILE_SIZE/1.5));
             }
             else {
-                if (worldTile.getColor() == null) {
+                var tileColor: string | null = worldTile.getColor();
+                if (tileColor == null) {
                     continue;
                 }
-                ctx.fillStyle = worldTile.getColor() as string;
+                ctx.fillStyle = tileColor as string;
                 ctx.fillRect(x*TILE_SIZE,y*TILE_SIZE, TILE_SIZE,TILE_SIZE);
 
                 var topEntity: Entity = worldTile.entities[worldTile.entities.length-1];
@@ -157,9 +157,9 @@ function mainProcess(): void {
 
                 // Draws the sprites of structures and objects
                 if (worldTile.worldObjects.length > 0) {
-                    ctx.filter = "drop-shadow(2px 2px 2.5px black)";
+                    // ctx.filter = "drop-shadow(2px 2px 2.5px black)";
                     ctx.drawImage(sprites.get(worldTile.worldObjects[worldTile.worldObjects.length-1].name) as HTMLImageElement, x*TILE_SIZE, y*TILE_SIZE, TILE_SIZE, TILE_SIZE);
-                    ctx.filter = "none";
+                    // ctx.filter = "none";
                 }
             }
             

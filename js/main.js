@@ -1,6 +1,6 @@
 "use strict";
 var canvas = document.getElementById("canvas");
-var ctx = canvas.getContext("2d");
+var ctx = canvas.getContext("2d", { alpha: false });
 // CANVAS PROPERTIES
 const CANVAS_WIDTH = 960;
 const CANVAS_HEIGHT = 540;
@@ -99,8 +99,7 @@ function mainProcess() {
         }
     }
     // DONE: Draw the entities.
-    ctx.fillStyle = CANVAS_BG_COLOR;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     for (var x = 0; x < X_TILES; x++) {
         for (var y = 0; y < Y_TILES; y++) {
             var worldTile = world.get(`${x},${y}`);
@@ -127,10 +126,11 @@ function mainProcess() {
                 ctx.fillText(worldTile.items.length.toString(), (x * TILE_SIZE) + (TILE_SIZE / 2), (y * TILE_SIZE) + (TILE_SIZE / 1.5));
             }
             else {
-                if (worldTile.getColor() == null) {
+                var tileColor = worldTile.getColor();
+                if (tileColor == null) {
                     continue;
                 }
-                ctx.fillStyle = worldTile.getColor();
+                ctx.fillStyle = tileColor;
                 ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
                 var topEntity = worldTile.entities[worldTile.entities.length - 1];
                 if (topEntity instanceof Human && topEntity.professionLetter != "") {
@@ -140,9 +140,9 @@ function mainProcess() {
                 }
                 // Draws the sprites of structures and objects
                 if (worldTile.worldObjects.length > 0) {
-                    ctx.filter = "drop-shadow(2px 2px 2.5px black)";
+                    // ctx.filter = "drop-shadow(2px 2px 2.5px black)";
                     ctx.drawImage(sprites.get(worldTile.worldObjects[worldTile.worldObjects.length - 1].name), x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-                    ctx.filter = "none";
+                    // ctx.filter = "none";
                 }
             }
         }
