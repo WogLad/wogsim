@@ -40,11 +40,20 @@ function getImgElement(src: string): HTMLImageElement {
     return el;
 }
 
+function drawRect(x: number, y: number, width: number, height: number, color: string): void {
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y, width, height);
+}
+
+function drawText(text: string, x: number, y: number, color: string): void {
+    ctx.fillStyle = color;
+    ctx.fillText(text, x, y);
+}
+
 function init(): void {
     ctx.textAlign = "center";
     ctx.imageSmoothingEnabled = false;
-    ctx.fillStyle = CANVAS_BG_COLOR;
-    ctx.fillRect(0,0, CANVAS_WIDTH,CANVAS_HEIGHT);
+    drawRect(0,0, CANVAS_WIDTH,CANVAS_HEIGHT, CANVAS_BG_COLOR);
 
     // Initialise the 2D world array
     for (var x = 0; x < X_TILES; x++) {
@@ -119,40 +128,33 @@ function mainProcess(): void {
             var worldTile: WorldTile = world.get(`${x},${y}`) as WorldTile;
             if (DEBUG_DRAW) {
                 if (worldTile.entities.length != 0) { // For entities
-                    ctx.fillStyle = "#0066ff";
-                    ctx.fillRect(x*TILE_SIZE,y*TILE_SIZE, TILE_SIZE,TILE_SIZE);
+                    drawRect(x*TILE_SIZE,y*TILE_SIZE, TILE_SIZE,TILE_SIZE, "#0066ff");
                 }
                 else if (worldTile.worldObjects.length != 0) {
-                    ctx.fillStyle = "gray";
-                    ctx.fillRect(x*TILE_SIZE,y*TILE_SIZE, TILE_SIZE,TILE_SIZE);
+                    drawRect(x*TILE_SIZE,y*TILE_SIZE, TILE_SIZE,TILE_SIZE, "gray");
                 }
                 else if (worldTile.canBeTraversed()) { // For walkable surfaces
-                    ctx.fillStyle = "#00d92f";
-                    ctx.fillRect(x*TILE_SIZE,y*TILE_SIZE, TILE_SIZE,TILE_SIZE);
+                    drawRect(x*TILE_SIZE,y*TILE_SIZE, TILE_SIZE,TILE_SIZE, "#00d92f");
                 }
                 else { // For non-walkable surfaces
-                    ctx.fillStyle = "#d4002e";
-                    ctx.fillRect(x*TILE_SIZE,y*TILE_SIZE, TILE_SIZE,TILE_SIZE);
+                    drawRect(x*TILE_SIZE,y*TILE_SIZE, TILE_SIZE,TILE_SIZE, "#d4002e");
                 }
 
                 // TODO: Make a checbox UI to toggle the below code on/off
                 // Draws the no. of items in the tile
-                ctx.fillStyle = "black";
-                ctx.fillText(worldTile.items.length.toString(), (x*TILE_SIZE)+(TILE_SIZE/2), (y*TILE_SIZE)+(TILE_SIZE/1.5));
+                drawText(worldTile.items.length.toString(), (x*TILE_SIZE)+(TILE_SIZE/2), (y*TILE_SIZE)+(TILE_SIZE/1.5), "black");
             }
             else {
                 var tileColor: string | null = worldTile.getColor();
                 if (tileColor == null) {
                     continue;
                 }
-                ctx.fillStyle = tileColor as string;
-                ctx.fillRect(x*TILE_SIZE,y*TILE_SIZE, TILE_SIZE,TILE_SIZE);
+                drawRect(x*TILE_SIZE,y*TILE_SIZE, TILE_SIZE,TILE_SIZE, tileColor as string);
 
                 var topEntity: Entity = worldTile.entities[worldTile.entities.length-1];
                 if (topEntity instanceof Human && topEntity.professionLetter != "") {
-                    ctx.fillStyle = "black";
                     ctx.font = "10px";
-                    ctx.fillText(topEntity.professionLetter, (x*TILE_SIZE)+(TILE_SIZE/2), (y*TILE_SIZE)+(TILE_SIZE/1.4));
+                    drawText(topEntity.professionLetter, (x*TILE_SIZE)+(TILE_SIZE/2), (y*TILE_SIZE)+(TILE_SIZE/1.4), "black");
                 }
 
                 // Draws the sprites of structures and objects
@@ -169,8 +171,7 @@ function mainProcess(): void {
     if (DEBUG_DRAW) {
         for (var ent of entities) {
             for (var move of ent.entity.moveQueue) {
-                ctx.fillStyle = "yellow";
-                ctx.fillRect(move.x*TILE_SIZE,move.y*TILE_SIZE, TILE_SIZE,TILE_SIZE);
+                drawRect(move.x*TILE_SIZE,move.y*TILE_SIZE, TILE_SIZE,TILE_SIZE, "yellow");
             }
         }
     }
