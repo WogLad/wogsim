@@ -6,11 +6,14 @@ const CANVAS_WIDTH: number = 960;
 const CANVAS_HEIGHT: number = 540;
 const CANVAS_BG_COLOR: string = "#f0ffff";
 const TILE_SIZE: number = 15;
-const X_TILES: number = Math.floor(CANVAS_WIDTH/TILE_SIZE);
-const Y_TILES: number = Math.floor(CANVAS_HEIGHT/TILE_SIZE);
 const OUTLINE_THICKNESS = 2; // <DEPRECATED> Thickness of the lines that make up the box surrounding the mouse
+var CAMERA_OFFSET: Vector2 = Vector2(0,0);
 
 // WORLD PROPERTIES
+const WORLD_WIDTH: number = 960*5;
+const WORLD_HEIGHT: number = 540*5;
+const X_TILES: number = Math.floor(WORLD_WIDTH/TILE_SIZE);
+const Y_TILES: number = Math.floor(WORLD_HEIGHT/TILE_SIZE);
 var PAUSED: boolean = false;
 const TILE_ENTITY_LIMIT: number = 2;
 const TILE_ITEM_LIMIT: number = 10;
@@ -48,6 +51,18 @@ function drawRect(x: number, y: number, width: number, height: number, color: st
 function drawText(text: string, x: number, y: number, color: string): void {
     ctx.fillStyle = color;
     ctx.fillText(text, x, y);
+}
+
+function setCameraOffset(x: number, y: number): boolean {
+    if (x >= (X_TILES - Math.floor(CANVAS_WIDTH/TILE_SIZE))+1 || x < 0) {
+        return false;
+    }
+    if (y >= (Y_TILES - Math.floor(CANVAS_HEIGHT/TILE_SIZE))+1 || y < 0) {
+        return false;
+    }
+    CAMERA_OFFSET.x = x;
+    CAMERA_OFFSET.y = y;
+    return true;
 }
 
 function init(): void {
@@ -123,58 +138,56 @@ function mainProcess(): void {
 
     // DONE: Draw the entities.
     ctx.clearRect(0,0, CANVAS_WIDTH,CANVAS_HEIGHT);
-    for (var x = 0; x < X_TILES; x++) {
-        for (var y = 0; y < Y_TILES; y++) {
+    for (var x = 0+CAMERA_OFFSET.x; x < Math.floor(CANVAS_WIDTH/TILE_SIZE)+CAMERA_OFFSET.x; x++) {
+        for (var y = 0+CAMERA_OFFSET.y; y < Math.floor(CANVAS_HEIGHT/TILE_SIZE)+CAMERA_OFFSET.y; y++) {
             var worldTile: WorldTile = world.get(`${x},${y}`) as WorldTile;
             if (DEBUG_DRAW) {
                 if (worldTile.entities.length != 0) { // For entities
-                    drawRect(x*TILE_SIZE,y*TILE_SIZE, TILE_SIZE,TILE_SIZE, "#0066ff");
+                    drawRect((x-CAMERA_OFFSET.x)*TILE_SIZE,(y-CAMERA_OFFSET.y)*TILE_SIZE, TILE_SIZE,TILE_SIZE, "#0066ff");
                 }
                 else if (worldTile.worldObjects.length != 0) {
-                    drawRect(x*TILE_SIZE,y*TILE_SIZE, TILE_SIZE,TILE_SIZE, "gray");
+                    drawRect((x-CAMERA_OFFSET.x)*TILE_SIZE,(y-CAMERA_OFFSET.y)*TILE_SIZE, TILE_SIZE,TILE_SIZE, "gray");
                 }
                 else if (worldTile.canBeTraversed()) { // For walkable surfaces
-                    drawRect(x*TILE_SIZE,y*TILE_SIZE, TILE_SIZE,TILE_SIZE, "#00d92f");
+                    drawRect((x-CAMERA_OFFSET.x)*TILE_SIZE,(y-CAMERA_OFFSET.y)*TILE_SIZE, TILE_SIZE,TILE_SIZE, "#00d92f");
                 }
                 else { // For non-walkable surfaces
-                    drawRect(x*TILE_SIZE,y*TILE_SIZE, TILE_SIZE,TILE_SIZE, "#d4002e");
+                    drawRect((x-CAMERA_OFFSET.x)*TILE_SIZE,(y-CAMERA_OFFSET.y)*TILE_SIZE, TILE_SIZE,TILE_SIZE, "#d4002e");
                 }
 
                 // TODO: Make a checbox UI to toggle the below code on/off
                 // Draws the no. of items in the tile
-                drawText(worldTile.items.length.toString(), (x*TILE_SIZE)+(TILE_SIZE/2), (y*TILE_SIZE)+(TILE_SIZE/1.5), "black");
+                drawText(worldTile.items.length.toString(), ((x-CAMERA_OFFSET.x)*TILE_SIZE)+(TILE_SIZE/2), ((y-CAMERA_OFFSET.y)*TILE_SIZE)+(TILE_SIZE/1.5), "black");
             }
             else {
-                var tileColor: string | null = worldTile.getColor();
-                if (tileColor == null) {
+                if (worldTile.getColor() == null) {
                     continue;
                 }
-                drawRect(x*TILE_SIZE,y*TILE_SIZE, TILE_SIZE,TILE_SIZE, tileColor as string);
+                drawRect((x-CAMERA_OFFSET.x)*TILE_SIZE,(y-CAMERA_OFFSET.y)*TILE_SIZE, TILE_SIZE,TILE_SIZE, worldTile.getColor() as string);
 
                 var topEntity: Entity = worldTile.entities[worldTile.entities.length-1];
                 if (topEntity instanceof Human && topEntity.professionLetter != "") {
                     ctx.font = "10px";
-                    drawText(topEntity.professionLetter, (x*TILE_SIZE)+(TILE_SIZE/2), (y*TILE_SIZE)+(TILE_SIZE/1.4), "black");
+                    drawText(topEntity.professionLetter, ((x-CAMERA_OFFSET.x)*TILE_SIZE)+(TILE_SIZE/2), ((y-CAMERA_OFFSET.y)*TILE_SIZE)+(TILE_SIZE/1.4), "black");
                 }
 
                 // Draws the sprites of structures and objects
                 if (worldTile.worldObjects.length > 0) {
-                    // ctx.filter = "drop-shadow(2px 2px 2.5px black)";
-                    ctx.drawImage(sprites.get(worldTile.worldObjects[worldTile.worldObjects.length-1].name) as HTMLImageElement, x*TILE_SIZE, y*TILE_SIZE, TILE_SIZE, TILE_SIZE);
-                    // ctx.filter = "none";
+                    ctx.drawImage(sprites.get(worldTile.worldObjects[worldTile.worldObjects.length-1].name) as HTMLImageElement, (x-CAMERA_OFFSET.x)*TILE_SIZE, (y-CAMERA_OFFSET.y)*TILE_SIZE, TILE_SIZE, TILE_SIZE);
                 }
             }
             
         }
     }
 
-    if (DEBUG_DRAW) {
-        for (var ent of entities) {
-            for (var move of ent.entity.moveQueue) {
-                drawRect(move.x*TILE_SIZE,move.y*TILE_SIZE, TILE_SIZE,TILE_SIZE, "yellow");
-            }
-        }
-    }
+    // TODO: Fix the problem caused by the infinite world when drawing movement path debug lines
+    // if (DEBUG_DRAW) {
+    //     for (var ent of entities) {
+    //         for (var move of ent.entity.moveQueue) {
+    //             drawRect(move.x*TILE_SIZE,move.y*TILE_SIZE, TILE_SIZE,TILE_SIZE, "yellow");
+    //         }
+    //     }
+    // }
 
     // Draws a red box around the mouse onto the TileMap that follows the mouse
     ctx.strokeStyle = "red";
