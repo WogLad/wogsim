@@ -12,7 +12,7 @@ canvas.addEventListener("click", (e) => {
 document.getElementById("togglePauseButton").addEventListener("click", (e) => {
     PAUSED = !PAUSED;
 });
-// TODO: Add movement controls that can adjust the camera offset
+// DONE: Add movement controls that can adjust the camera offset
 var isMouseDown = false;
 var initMousePos = { x: 0, y: 0 };
 var mouseTilePos = { x: 0, y: 0 };

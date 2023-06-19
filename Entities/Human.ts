@@ -1,6 +1,8 @@
 class Human extends Entity {
     /** The letter that is displayed on the human to denote its assigned profession */
     professionLetter: string;
+    /** The function that is called when a human has to find their next spot to move to for their profession */
+    professionMover: (currentX: number, currentY: number) => Vector2 = (x,y) => {return Vector2(0,0)};
 
     constructor(professionLetter: string) {
         super(true, true, "red");
@@ -25,7 +27,7 @@ class Human extends Entity {
             this.moveQueue.shift(); // Removes the first grid node after moving to it (for A*)
         }
         else {
-            this.moveTo(Vector2(currentX,currentY), this.getRandomPos()); // DONE: Change this to use a random movement function
+            this.moveTo(Vector2(currentX,currentY), this.professionMover(currentX, currentY)); // DONE: Change this to use a random movement function
         }
 
         // Prevents the entity from going out of bounds

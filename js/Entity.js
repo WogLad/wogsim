@@ -21,8 +21,22 @@ class Entity {
         //@ts-ignore
         this.moveQueue = astar.search(aStarGrid, aStarGrid.grid[startPos.x][startPos.y], aStarGrid.grid[endPos.x][endPos.y]);
     }
-    getRandomPos() {
-        return Vector2(Math.floor(Math.random() * X_TILES), Math.floor(Math.random() * Y_TILES));
+    getRandomPos(currentX, currentY, radius = 10) {
+        var randomX = Math.floor(Math.random() * ((currentX + radius) - (currentX - radius))) + (currentX - radius);
+        var randomY = Math.floor(Math.random() * ((currentY + radius) - (currentY - radius))) + (currentY - radius);
+        if (randomX < 0) {
+            randomX = 0;
+        }
+        if (randomX > X_TILES - 1) {
+            randomX = X_TILES - 1;
+        }
+        if (randomY < 0) {
+            randomY = 0;
+        }
+        if (randomY > Y_TILES - 1) {
+            randomY = Y_TILES - 1;
+        }
+        return Vector2(randomX, randomY);
     }
     addToInventory(item, count = 1) {
         if (this.inventory.length >= INVENTORY_MAX_CAPACITY) {
