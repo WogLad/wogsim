@@ -27,7 +27,10 @@ class Human extends Entity {
             this.moveQueue.shift(); // Removes the first grid node after moving to it (for A*)
         }
         else {
-            this.moveTo(Vector2(currentX,currentY), this.professionMover(currentX, currentY)); // DONE: Change this to use a random movement function
+            var newPos: Vector2 = this.professionMover(currentX, currentY);
+            if (!(newPos.x == currentX && newPos.y == currentY)) {
+                this.moveTo(Vector2(currentX,currentY), newPos); // DONE: Change this to use a random movement function
+            }
         }
 
         // Prevents the entity from going out of bounds
