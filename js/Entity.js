@@ -53,4 +53,53 @@ class Entity {
         }
         return true;
     }
+    findNearest(currentX, currentY, maxRadius, predicate) {
+        var centerTile = world[currentX] ? world[currentX][currentY] : undefined;
+        if (centerTile && predicate(centerTile, currentX, currentY)) {
+            return Vector2(currentX, currentY);
+        }
+        for (var d = 1; d <= maxRadius; d++) {
+            // 1. Top row: y = currentY - d, x from currentX - d to currentX + d
+            var y = currentY - d;
+            for (var x = currentX - d; x <= currentX + d; x++) {
+                if (world[x] !== undefined && world[x][y] !== undefined) {
+                    if (predicate(world[x][y], x, y)) {
+                        return Vector2(x, y);
+                    }
+                }
+            }
+            // 2. Bottom row: y = currentY + d, x from currentX - d to currentX + d
+            y = currentY + d;
+            for (var x = currentX - d; x <= currentX + d; x++) {
+                if (world[x] !== undefined && world[x][y] !== undefined) {
+                    if (predicate(world[x][y], x, y)) {
+                        return Vector2(x, y);
+                    }
+                }
+            }
+            // 3. Left column: x = currentX - d, y from currentY - d + 1 to currentY + d - 1
+            var x = currentX - d;
+            if (world[x] !== undefined) {
+                for (var yVal = currentY - d + 1; yVal <= currentY + d - 1; yVal++) {
+                    if (world[x][yVal] !== undefined) {
+                        if (predicate(world[x][yVal], x, yVal)) {
+                            return Vector2(x, yVal);
+                        }
+                    }
+                }
+            }
+            // 4. Right column: x = currentX + d, y from currentY - d + 1 to currentY + d - 1
+            x = currentX + d;
+            if (world[x] !== undefined) {
+                for (var yVal = currentY - d + 1; yVal <= currentY + d - 1; yVal++) {
+                    if (world[x][yVal] !== undefined) {
+                        if (predicate(world[x][yVal], x, yVal)) {
+                            return Vector2(x, yVal);
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
 }

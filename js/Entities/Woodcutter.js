@@ -13,18 +13,13 @@ class Woodcutter extends Human {
                 currentTile.worldObjects.pop();
                 drawTileToOffscreen(currentX, currentY);
             }
-            for (var x = currentX - this.radarLength; x < currentX + this.radarLength; x++) {
-                for (var y = currentY - this.radarLength; y < currentY + this.radarLength; y++) {
-                    if (world[x] == undefined || world[x][y] == undefined) {
-                        continue;
-                    }
-                    var worldObjects = world[x][y].worldObjects;
-                    for (var obj of worldObjects) {
-                        if (obj.name == "tree") {
-                            return Vector2(x, y);
-                        }
-                    }
-                }
+            var nearestTree = this.findNearest(currentX, currentY, this.radarLength, (tile) => {
+                var worldObjs = tile.worldObjects;
+                var objLen = worldObjs.length;
+                return objLen > 0 && worldObjs[objLen - 1].name === "tree";
+            });
+            if (nearestTree) {
+                return nearestTree;
             }
             return this.getRandomPos(currentX, currentY);
         };

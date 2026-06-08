@@ -290,6 +290,44 @@ function mainProcess() {
                 ctx.fillRect(rects[i], rects[i + 1], TILE_SIZE, TILE_SIZE);
             }
         }
+        // Draw concentric search rings for visible entities to reflect the ring search pattern (square concentric rings)
+        ctx.strokeStyle = "rgba(0, 255, 204, 0.25)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        for (var i = 0; i < entities.length; i++) {
+            var ent = entities[i];
+            var pos = ent.pos;
+            if (pos.x >= viewStartX && pos.x < viewEndX && pos.y >= viewStartY && pos.y < viewEndY) {
+                var screenX = Math.round((pos.x - CAMERA_OFFSET.x) * TILE_SIZE);
+                var screenY = Math.round((pos.y - CAMERA_OFFSET.y) * TILE_SIZE);
+                // Draw concentric square search rings matching the Chebyshev distance search pattern
+                ctx.rect(screenX - 3 * TILE_SIZE, screenY - 3 * TILE_SIZE, 7 * TILE_SIZE, 7 * TILE_SIZE);
+                ctx.rect(screenX - 6 * TILE_SIZE, screenY - 6 * TILE_SIZE, 13 * TILE_SIZE, 13 * TILE_SIZE);
+                ctx.rect(screenX - 10 * TILE_SIZE, screenY - 10 * TILE_SIZE, 21 * TILE_SIZE, 21 * TILE_SIZE);
+            }
+        }
+        ctx.stroke();
+        // Draw yellow dashed pathfinding lines to destination
+        ctx.strokeStyle = "rgba(255, 255, 0, 0.45)";
+        ctx.lineWidth = 1.2;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        for (var i = 0; i < entities.length; i++) {
+            var ent = entities[i];
+            var e = ent.entity;
+            var pos = ent.pos;
+            if (e.moveQueue.length > 0) {
+                var targetNode = e.moveQueue[e.moveQueue.length - 1];
+                var startX = Math.round((pos.x - CAMERA_OFFSET.x) * TILE_SIZE) + TILE_SIZE / 2;
+                var startY = Math.round((pos.y - CAMERA_OFFSET.y) * TILE_SIZE) + TILE_SIZE / 2;
+                var endX = Math.round((targetNode.x - CAMERA_OFFSET.x) * TILE_SIZE) + TILE_SIZE / 2;
+                var endY = Math.round((targetNode.y - CAMERA_OFFSET.y) * TILE_SIZE) + TILE_SIZE / 2;
+                ctx.moveTo(startX, startY);
+                ctx.lineTo(endX, endY);
+            }
+        }
+        ctx.stroke();
+        ctx.setLineDash([]); // Reset line dash
     }
     else {
         // Fast path: blit terrain background and structures directly from the offscreen canvas
@@ -340,8 +378,16 @@ function mainProcess() {
     // Draws a red box around the mouse onto the TileMap that follows the mouse
     var hoveredTileX = Math.floor(mousePos.x / TILE_SIZE + CAMERA_OFFSET.x);
     var hoveredTileY = Math.floor(mousePos.y / TILE_SIZE + CAMERA_OFFSET.y);
-    ctx.strokeStyle = "red";
-    ctx.strokeRect(Math.round((hoveredTileX - CAMERA_OFFSET.x) * TILE_SIZE), Math.round((hoveredTileY - CAMERA_OFFSET.y) * TILE_SIZE), TILE_SIZE, TILE_SIZE);
+    var testToolsPreviewDrawn = false;
+    //@ts-ignore
+    if (typeof TestTools !== "undefined") {
+        //@ts-ignore
+        testToolsPreviewDrawn = TestTools.drawPreview(hoveredTileX, hoveredTileY);
+    }
+    if (!testToolsPreviewDrawn) {
+        ctx.strokeStyle = "red";
+        ctx.strokeRect(Math.round((hoveredTileX - CAMERA_OFFSET.x) * TILE_SIZE), Math.round((hoveredTileY - CAMERA_OFFSET.y) * TILE_SIZE), TILE_SIZE, TILE_SIZE);
+    }
     // For the world ticks
     if (!PAUSED) {
         ticks++;

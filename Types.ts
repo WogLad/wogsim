@@ -4,19 +4,19 @@ interface Vector2 {
 }
 
 function Vector2(x: number, y: number): Vector2 {
-    return {x:x, y:y};
+    return { x: x, y: y };
 }
 
 interface GridNode {
-    closed:     boolean;
-    f:          number;
-    g:          number;
-    h:          number;
-    parent:     GridNode;
-    visited:    boolean;
-    weight:     number;
-    x:          number;
-    y:          number;
+    closed: boolean;
+    f: number;
+    g: number;
+    h: number;
+    parent: GridNode;
+    visited: boolean;
+    weight: number;
+    x: number;
+    y: number;
 }
 
 interface EntityData {

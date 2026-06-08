@@ -1,5 +1,3 @@
-declare function drawTileToOffscreen(x: number, y: number): void;
-
 class Woodcutter extends Human {
     /** The radius of the search square that is used to find the human's next position */
     radarLength: number = 10; // TODO: Add a stroke rect in the debug draw function to show the radar of the human
@@ -18,16 +16,14 @@ class Woodcutter extends Human {
                 drawTileToOffscreen(currentX, currentY);
             }
 
-            for (var x = currentX - this.radarLength; x < currentX + this.radarLength; x++) {
-                for (var y = currentY - this.radarLength; y < currentY + this.radarLength; y++) {
-                    if (world[x] == undefined || world[x][y] == undefined) { continue }
-                    var worldObjects: WorldObject[] = world[x][y].worldObjects;
-                    for (var obj of worldObjects) {
-                        if (obj.name == "tree") {
-                            return Vector2(x, y);
-                        }
-                    }
-                }
+            var nearestTree = this.findNearest(currentX, currentY, this.radarLength, (tile) => {
+                var worldObjs = tile.worldObjects;
+                var objLen = worldObjs.length;
+                return objLen > 0 && worldObjs[objLen - 1].name === "tree";
+            });
+
+            if (nearestTree) {
+                return nearestTree;
             }
             return this.getRandomPos(currentX, currentY);
         }

@@ -52,3 +52,152 @@ img {
     pointer-events: none;
     transition: color 0.2s ease, border-color 0.2s ease;
 }
+
+/* Testing Tools GUI Panel */
+#testToolsPanel {
+    position: fixed;
+    bottom: 15px;
+    right: 15px;
+    width: 250px;
+    background: rgba(10, 10, 35, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    color: #f0f0ff;
+    z-index: 10000;
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+#testToolsPanel.minimized {
+    height: 44px;
+    width: 200px;
+}
+
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.panel-header h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: #00ffcc;
+    text-shadow: 0 0 10px rgba(0, 255, 204, 0.3);
+}
+
+#togglePanelBtn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 8px;
+    filter: none;
+    transition: color 0.2s;
+}
+
+#togglePanelBtn:hover {
+    color: #ffffff;
+}
+
+.panel-content {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    transition: opacity 0.2s;
+}
+
+#testToolsPanel.minimized .panel-content {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.control-group label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: rgba(255, 255, 255, 0.5);
+    font-weight: bold;
+}
+
+.btn-group {
+    display: flex;
+    gap: 6px;
+}
+
+.btn-group button {
+    flex: 1;
+    padding: 8px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #e0e0ff;
+    border-radius: 6px;
+    cursor: pointer;
+    filter: none; /* Override default button filter drop-shadow */
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-group button:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+.btn-group button.active {
+    background: #00ffcc;
+    color: #000020;
+    font-weight: 600;
+    border-color: #00ffcc;
+    box-shadow: 0 0 12px rgba(0, 255, 204, 0.4);
+}
+
+/* Specific styling for delete/remove active button to look red/warning */
+.btn-group #modeDeleteBtn.active {
+    background: #ff3366;
+    color: #ffffff;
+    border-color: #ff3366;
+    box-shadow: 0 0 12px rgba(255, 51, 102, 0.4);
+}
+
+.panel-info {
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+#entityStats {
+    font-size: 12px;
+    color: #00ffcc;
+    font-family: monospace;
+}
+
+.help-text {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.4);
+    font-style: italic;
+    line-height: 1.4;
+}
+
+.hidden {
+    display: none !important;
+}

@@ -12,15 +12,11 @@ class Fisherman extends Human {
             if (adjacentTile && adjacentTile.type == TileType.WATER) {
                 return Vector2(currentX, currentY);
             }
-            for (var x = currentX - this.radarLength; x < currentX + this.radarLength; x++) {
-                for (var y = currentY - this.radarLength; y < currentY + this.radarLength; y++) {
-                    if (world[x] == undefined || world[x][y] == undefined) {
-                        continue;
-                    }
-                    if (world[x][y].type == TileType.WATER && x > 0) {
-                        return Vector2(x - 1, y);
-                    }
-                }
+            var nearestWater = this.findNearest(currentX, currentY, this.radarLength, (tile, x, y) => {
+                return tile.type === TileType.WATER && x > 0;
+            });
+            if (nearestWater) {
+                return Vector2(nearestWater.x - 1, nearestWater.y);
             }
             return this.getRandomPos(currentX, currentY);
         };

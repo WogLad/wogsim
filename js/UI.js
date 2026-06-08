@@ -6,11 +6,24 @@ var _a;
 });
 // DONE: Make a tile inspector that shows all the information related to that tile when clicked on
 canvas.addEventListener("click", (e) => {
-    var clickX = Math.floor(mousePos.x / TILE_SIZE) + CAMERA_OFFSET.x;
-    var clickY = Math.floor(mousePos.y / TILE_SIZE) + CAMERA_OFFSET.y;
-    var clickTile = world[clickX] ? world[clickX][clickY] : undefined;
-    if (clickTile) {
-        tileInspectorDiv.innerHTML = clickTile.getTileInspectorInfoDiv().innerHTML;
+    // Determine drag distance
+    var dragDist = Math.hypot(e.clientX - dragStartMousePos.x, e.clientY - dragStartMousePos.y);
+    if (dragDist > 5)
+        return; // Prevent click action on drag
+    var clickX = Math.floor(mousePos.x / TILE_SIZE + CAMERA_OFFSET.x);
+    var clickY = Math.floor(mousePos.y / TILE_SIZE + CAMERA_OFFSET.y);
+    // Check if test tools handle the click
+    var handled = false;
+    //@ts-ignore
+    if (typeof TestTools !== "undefined") {
+        //@ts-ignore
+        handled = TestTools.handleCanvasClick(clickX, clickY);
+    }
+    if (!handled) {
+        var clickTile = world[clickX] ? world[clickX][clickY] : undefined;
+        if (clickTile) {
+            tileInspectorDiv.innerHTML = clickTile.getTileInspectorInfoDiv().innerHTML;
+        }
     }
 });
 document.getElementById("togglePauseButton").addEventListener("click", (e) => {

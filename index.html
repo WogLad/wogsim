@@ -9,6 +9,37 @@
 </head>
 <body>
     <div id="fpsCounter">0 FPS</div>
+
+    <div id="testToolsPanel">
+        <div class="panel-header">
+            <h3>🛠️ Simulation Tester</h3>
+            <button id="togglePanelBtn">—</button>
+        </div>
+        <div class="panel-content">
+            <div class="control-group">
+                <label>Tool Mode</label>
+                <div class="btn-group">
+                    <button id="modeInspectBtn" class="mode-btn active">Inspect</button>
+                    <button id="modeSpawnBtn" class="mode-btn">Spawn</button>
+                    <button id="modeDeleteBtn" class="mode-btn">Remove</button>
+                </div>
+            </div>
+            
+            <div id="entitySelectGroup" class="control-group hidden">
+                <label>Select Entity</label>
+                <div class="btn-group">
+                    <button id="entityWoodcutterBtn" class="entity-btn active">Woodcutter (W)</button>
+                    <button id="entityFishermanBtn" class="entity-btn">Fisherman (F)</button>
+                </div>
+            </div>
+            
+            <div class="panel-info">
+                <div id="entityStats">Total Entities: 0</div>
+                <div class="help-text">Click on the canvas to inspect tiles.</div>
+            </div>
+        </div>
+    </div>
+
     <div id="canvasDiv">
         <br>
         <h1>WOGSIM</h1>
@@ -51,6 +82,7 @@
 
     <!-- Main Final Scripts -->
     <script defer src="js/main.js"></script>
+    <script defer src="js/TestTools.js"></script>
     <script defer src="js/UI.js"></script>
 </body>
 </html>
