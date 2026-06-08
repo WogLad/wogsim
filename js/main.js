@@ -31,8 +31,15 @@ var entities = [];
 var world = [];
 var aStarGrid;
 var sprites = new Map();
-function getImgElement(src) {
+var offscreenCanvas = document.createElement("canvas");
+var offscreenCtx = offscreenCanvas.getContext("2d", { alpha: false });
+offscreenCanvas.width = WORLD_WIDTH;
+offscreenCanvas.height = WORLD_HEIGHT;
+function getImgElement(src, onLoadCallback) {
     var el = document.createElement("img");
+    if (onLoadCallback) {
+        el.onload = onLoadCallback;
+    }
     el.src = src;
     return el;
 }
@@ -45,12 +52,16 @@ function drawText(text, x, y, color) {
     ctx.fillText(text, x, y);
 }
 function setCameraOffset(x, y) {
-    if (x >= (X_TILES - Math.floor(CANVAS_WIDTH / TILE_SIZE)) + 1 || x < 0) {
-        return false;
-    }
-    if (y >= (Y_TILES - Math.floor(CANVAS_HEIGHT / TILE_SIZE)) + 1 || y < 0) {
-        return false;
-    }
+    var maxOffsetX = X_TILES - CANVAS_WIDTH / TILE_SIZE;
+    var maxOffsetY = Y_TILES - CANVAS_HEIGHT / TILE_SIZE;
+    if (x < 0)
+        x = 0;
+    if (x > maxOffsetX)
+        x = maxOffsetX;
+    if (y < 0)
+        y = 0;
+    if (y > maxOffsetY)
+        y = maxOffsetY;
     CAMERA_OFFSET.x = x;
     CAMERA_OFFSET.y = y;
     return true;
@@ -90,8 +101,42 @@ function init() {
     }
     //@ts-ignore - as the Graph class is part of the JS code, not the TS code
     aStarGrid = new Graph(gridInput, { diagonal: true });
-    // Load in all the images
-    sprites.set("tree", getImgElement("img/tree.png"));
+    // Load in all the images and trigger offscreen redraw when loaded
+    sprites.set("tree", getImgElement("img/tree.png", () => {
+        drawEntireWorldToOffscreen();
+    }));
+    // Perform initial draw of terrain backgrounds to offscreen canvas
+    drawEntireWorldToOffscreen();
+}
+function drawTileToOffscreen(x, y) {
+    var tile = world[x] ? world[x][y] : undefined;
+    if (!tile)
+        return;
+    var screenX = x * TILE_SIZE;
+    var screenY = y * TILE_SIZE;
+    // Draw tile terrain color (ignore entities since they are dynamic)
+    offscreenCtx.fillStyle = tile.type;
+    offscreenCtx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+    // Draw worldObject sprite (like trees)
+    var worldObjs = tile.worldObjects;
+    var objLen = worldObjs.length;
+    if (objLen > 0) {
+        var spriteName = worldObjs[objLen - 1].name;
+        var spriteImg = sprites.get(spriteName);
+        if (spriteImg && spriteImg.complete) {
+            offscreenCtx.drawImage(spriteImg, screenX, screenY, TILE_SIZE, TILE_SIZE);
+        }
+    }
+}
+function drawEntireWorldToOffscreen() {
+    offscreenCtx.imageSmoothingEnabled = false;
+    offscreenCtx.fillStyle = CANVAS_BG_COLOR;
+    offscreenCtx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+    for (var x = 0; x < X_TILES; x++) {
+        for (var y = 0; y < Y_TILES; y++) {
+            drawTileToOffscreen(x, y);
+        }
+    }
 }
 init();
 var DEBUG_DRAW = false;
@@ -109,6 +154,8 @@ var textXDraws = [];
 var textYDraws = [];
 var textColorDraws = [];
 var textFontDraws = [];
+var screenXCoords = new Array(200);
+var screenYCoords = new Array(200);
 function clearDrawBuffers() {
     for (var key in drawBuckets) {
         drawBuckets[key].length = 0;
@@ -183,23 +230,34 @@ function mainProcess() {
     // DONE: Draw the entities.
     ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     clearDrawBuffers();
-    var viewStartX = CAMERA_OFFSET.x;
-    var viewEndX = Math.floor(CANVAS_WIDTH / TILE_SIZE) + CAMERA_OFFSET.x;
-    var viewStartY = CAMERA_OFFSET.y;
-    var viewEndY = Math.floor(CANVAS_HEIGHT / TILE_SIZE) + CAMERA_OFFSET.y;
-    for (var x = viewStartX; x < viewEndX; x++) {
-        var column = world[x];
-        if (!column)
-            continue;
-        var screenX = (x - viewStartX) * TILE_SIZE;
-        for (var y = viewStartY; y < viewEndY; y++) {
-            var worldTile = column[y];
-            if (!worldTile)
+    var viewStartX = Math.max(0, Math.floor(CAMERA_OFFSET.x));
+    var viewEndX = Math.min(X_TILES, Math.ceil(CAMERA_OFFSET.x + CANVAS_WIDTH / TILE_SIZE) + 1);
+    var viewStartY = Math.max(0, Math.floor(CAMERA_OFFSET.y));
+    var viewEndY = Math.min(Y_TILES, Math.ceil(CAMERA_OFFSET.y + CANVAS_HEIGHT / TILE_SIZE) + 1);
+    if (DEBUG_DRAW) {
+        // Pre-calculate screen X and Y coordinates to bypass Math.round inside nested loops
+        var viewWidth = viewEndX - viewStartX;
+        for (var i = 0; i < viewWidth; i++) {
+            screenXCoords[i] = Math.round((viewStartX + i - CAMERA_OFFSET.x) * TILE_SIZE);
+        }
+        var viewHeight = viewEndY - viewStartY;
+        for (var i = 0; i < viewHeight; i++) {
+            screenYCoords[i] = Math.round((viewStartY + i - CAMERA_OFFSET.y) * TILE_SIZE);
+        }
+        for (var x = viewStartX; x < viewEndX; x++) {
+            var column = world[x];
+            if (!column)
                 continue;
-            var screenY = (y - viewStartY) * TILE_SIZE;
-            var color = null;
-            if (DEBUG_DRAW) {
-                if (worldTile.entities.length != 0) {
+            var screenX = screenXCoords[x - viewStartX];
+            for (var y = viewStartY; y < viewEndY; y++) {
+                var worldTile = column[y];
+                if (!worldTile)
+                    continue;
+                var screenY = screenYCoords[y - viewStartY];
+                var color = null;
+                var tEntities = worldTile.entities;
+                var entityLen = tEntities.length;
+                if (entityLen != 0) {
                     color = "#0066ff";
                 }
                 else if (worldTile.worldObjects.length != 0) {
@@ -221,59 +279,55 @@ function mainProcess() {
                 textColorDraws.push("black");
                 textFontDraws.push(undefined);
             }
-            else {
-                color = worldTile.getColor();
-                if (color) {
-                    if (!drawBuckets[color]) {
-                        drawBuckets[color] = [];
-                    }
-                    drawBuckets[color].push(screenX, screenY);
-                }
-                var topEntity = worldTile.entities[worldTile.entities.length - 1];
-                if (topEntity instanceof Human && topEntity.professionLetter != "") {
-                    textValDraws.push(topEntity.professionLetter);
+        }
+        // Draw all backgrounds in batches by color to avoid fillStyle thrashing
+        for (var c in drawBuckets) {
+            var rects = drawBuckets[c];
+            if (rects.length === 0)
+                continue;
+            ctx.fillStyle = c;
+            for (var i = 0; i < rects.length; i += 2) {
+                ctx.fillRect(rects[i], rects[i + 1], TILE_SIZE, TILE_SIZE);
+            }
+        }
+    }
+    else {
+        // Fast path: blit terrain background and structures directly from the offscreen canvas
+        var srcX = Math.round(CAMERA_OFFSET.x * TILE_SIZE);
+        var srcY = Math.round(CAMERA_OFFSET.y * TILE_SIZE);
+        ctx.drawImage(offscreenCanvas, srcX, srcY, CANVAS_WIDTH, CANVAS_HEIGHT, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        // Viewport culling loop over active entities (O(N) instead of scanning the full 2,304 tile grid)
+        for (var i = 0; i < entities.length; i++) {
+            var ent = entities[i];
+            var pos = ent.pos;
+            if (pos.x >= viewStartX && pos.x < viewEndX && pos.y >= viewStartY && pos.y < viewEndY) {
+                var e = ent.entity;
+                if (e instanceof Human && e.professionLetter != "") {
+                    var screenX = Math.round((pos.x - CAMERA_OFFSET.x) * TILE_SIZE);
+                    var screenY = Math.round((pos.y - CAMERA_OFFSET.y) * TILE_SIZE);
+                    textValDraws.push(e.professionLetter);
                     textXDraws.push(screenX + (TILE_SIZE / 2));
                     textYDraws.push(screenY + (TILE_SIZE / 1.4));
                     textColorDraws.push("black");
                     textFontDraws.push("10px");
                 }
-                if (worldTile.worldObjects.length > 0) {
-                    var spriteImg = sprites.get(worldTile.worldObjects[worldTile.worldObjects.length - 1].name);
-                    if (spriteImg) {
-                        spriteImgDraws.push(spriteImg);
-                        spriteXDraws.push(screenX);
-                        spriteYDraws.push(screenY);
-                    }
-                }
             }
         }
     }
-    // 1. Draw all backgrounds in batches by color to avoid fillStyle thrashing
-    for (var c in drawBuckets) {
-        var rects = drawBuckets[c];
-        if (rects.length === 0)
-            continue;
-        ctx.fillStyle = c;
-        for (var i = 0; i < rects.length; i += 2) {
-            ctx.fillRect(rects[i], rects[i + 1], TILE_SIZE, TILE_SIZE);
+    // Draw all letters and item counts
+    if (textValDraws.length > 0) {
+        ctx.textAlign = "center";
+        for (var i = 0; i < textValDraws.length; i++) {
+            var font = textFontDraws[i];
+            if (font) {
+                ctx.font = font;
+            }
+            else {
+                ctx.font = "10px sans-serif";
+            }
+            ctx.fillStyle = textColorDraws[i];
+            ctx.fillText(textValDraws[i], textXDraws[i], textYDraws[i]);
         }
-    }
-    // 2. Draw all worldObject sprites
-    for (var i = 0; i < spriteImgDraws.length; i++) {
-        ctx.drawImage(spriteImgDraws[i], spriteXDraws[i], spriteYDraws[i], TILE_SIZE, TILE_SIZE);
-    }
-    // 3. Draw all letters and item counts
-    ctx.textAlign = "center";
-    for (var i = 0; i < textValDraws.length; i++) {
-        var font = textFontDraws[i];
-        if (font) {
-            ctx.font = font;
-        }
-        else {
-            ctx.font = "10px sans-serif";
-        }
-        ctx.fillStyle = textColorDraws[i];
-        ctx.fillText(textValDraws[i], textXDraws[i], textYDraws[i]);
     }
     // TODO: Fix the problem caused by the infinite world when drawing movement path debug lines
     // if (DEBUG_DRAW) {
@@ -284,8 +338,10 @@ function mainProcess() {
     //     }
     // }
     // Draws a red box around the mouse onto the TileMap that follows the mouse
+    var hoveredTileX = Math.floor(mousePos.x / TILE_SIZE + CAMERA_OFFSET.x);
+    var hoveredTileY = Math.floor(mousePos.y / TILE_SIZE + CAMERA_OFFSET.y);
     ctx.strokeStyle = "red";
-    ctx.strokeRect(Math.floor(mousePos.x / TILE_SIZE) * TILE_SIZE, Math.floor(mousePos.y / TILE_SIZE) * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+    ctx.strokeRect(Math.round((hoveredTileX - CAMERA_OFFSET.x) * TILE_SIZE), Math.round((hoveredTileY - CAMERA_OFFSET.y) * TILE_SIZE), TILE_SIZE, TILE_SIZE);
     // For the world ticks
     if (!PAUSED) {
         ticks++;

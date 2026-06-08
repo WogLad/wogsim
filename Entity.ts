@@ -6,6 +6,9 @@ class Entity {
     ticksAlive: number = 0;
     color: string;
     
+    lastPathfindTime: number = 0;
+    pathfindCooldown: number = 2000; // 2 seconds in milliseconds
+    
     isLiving: boolean;
     isMovable: boolean;
 
@@ -23,6 +26,11 @@ class Entity {
         if (!this.isMovable) {
             this.move = null;
         }
+
+        // Add random jitter to cooldown length (1.5s to 2.5s) to prevent sync over time
+        this.pathfindCooldown = 1500 + Math.random() * 1000;
+        // Stagger initial check times so they start searching at different frames
+        this.lastPathfindTime = performance.now() - Math.random() * this.pathfindCooldown;
     }
 
     moveTo(startPos: Vector2, endPos: Vector2) {

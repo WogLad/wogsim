@@ -27,9 +27,13 @@ class Human extends Entity {
             this.moveQueue.shift(); // Removes the first grid node after moving to it (for A*)
         }
         else {
-            var newPos: Vector2 = this.professionMover(currentX, currentY);
-            if (!(newPos.x == currentX && newPos.y == currentY)) {
-                this.moveTo(Vector2(currentX,currentY), newPos); // DONE: Change this to use a random movement function
+            var now = performance.now();
+            if (now - this.lastPathfindTime >= this.pathfindCooldown) {
+                var newPos: Vector2 = this.professionMover(currentX, currentY);
+                if (!(newPos.x == currentX && newPos.y == currentY)) {
+                    this.lastPathfindTime = now;
+                    this.moveTo(Vector2(currentX,currentY), newPos); // DONE: Change this to use a random movement function
+                }
             }
         }
 

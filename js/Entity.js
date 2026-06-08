@@ -6,6 +6,8 @@ class Entity {
     constructor(living, movable, viewColor) {
         this.id = crypto.randomUUID();
         this.ticksAlive = 0;
+        this.lastPathfindTime = 0;
+        this.pathfindCooldown = 2000; // 2 seconds in milliseconds
         this.moveQueue = [];
         this.inventory = [];
         this.process = () => { }; // Called every frame
@@ -16,6 +18,10 @@ class Entity {
         if (!this.isMovable) {
             this.move = null;
         }
+        // Add random jitter to cooldown length (1.5s to 2.5s) to prevent sync over time
+        this.pathfindCooldown = 1500 + Math.random() * 1000;
+        // Stagger initial check times so they start searching at different frames
+        this.lastPathfindTime = performance.now() - Math.random() * this.pathfindCooldown;
     }
     moveTo(startPos, endPos) {
         //@ts-ignore

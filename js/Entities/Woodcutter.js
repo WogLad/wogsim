@@ -11,6 +11,7 @@ class Woodcutter extends Human {
             var currentTile = world[currentX][currentY];
             if (currentTile.worldObjects.length > 0 && currentTile.worldObjects[currentTile.worldObjects.length - 1].name == "tree") {
                 currentTile.worldObjects.pop();
+                drawTileToOffscreen(currentX, currentY);
             }
             for (var x = currentX - this.radarLength; x < currentX + this.radarLength; x++) {
                 for (var y = currentY - this.radarLength; y < currentY + this.radarLength; y++) {
