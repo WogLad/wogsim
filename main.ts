@@ -317,6 +317,24 @@ function mainProcess(): void {
             }
         }
 
+        // Draw path tile highlights for all entities inside the viewport
+        ctx.fillStyle = "rgba(255, 255, 0, 0.4)";
+        ctx.beginPath();
+        for (var i = 0; i < entities.length; i++) {
+            var ent = entities[i];
+            var e = ent.entity;
+            var path = e.moveQueue;
+            for (var p = 0; p < path.length; p++) {
+                var node = path[p];
+                if (node.x >= viewStartX && node.x < viewEndX && node.y >= viewStartY && node.y < viewEndY) {
+                    var screenX = Math.round((node.x - CAMERA_OFFSET.x) * TILE_SIZE);
+                    var screenY = Math.round((node.y - CAMERA_OFFSET.y) * TILE_SIZE);
+                    ctx.rect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+                }
+            }
+        }
+        ctx.fill();
+
         // Draw concentric search rings for visible entities to reflect the ring search pattern (square concentric rings)
         ctx.strokeStyle = "rgba(0, 255, 204, 0.25)";
         ctx.lineWidth = 1.5;
@@ -336,24 +354,27 @@ function mainProcess(): void {
         }
         ctx.stroke();
 
-        // Draw yellow dashed pathfinding lines to destination
-        ctx.strokeStyle = "rgba(255, 255, 0, 0.45)";
-        ctx.lineWidth = 1.2;
-        ctx.setLineDash([4, 4]);
+        // Draw yellow dashed pathfinding lines along the entire A* path steps
+        ctx.strokeStyle = "rgba(255, 240, 0, 0.95)";
+        ctx.lineWidth = 2.5;
+        ctx.setLineDash([6, 3]);
         ctx.beginPath();
         for (var i = 0; i < entities.length; i++) {
             var ent = entities[i];
             var e = ent.entity;
             var pos = ent.pos;
-            if (e.moveQueue.length > 0) {
-                var targetNode = e.moveQueue[e.moveQueue.length - 1];
+            var path = e.moveQueue;
+            if (path.length > 0) {
                 var startX = Math.round((pos.x - CAMERA_OFFSET.x) * TILE_SIZE) + TILE_SIZE / 2;
                 var startY = Math.round((pos.y - CAMERA_OFFSET.y) * TILE_SIZE) + TILE_SIZE / 2;
-                var endX = Math.round((targetNode.x - CAMERA_OFFSET.x) * TILE_SIZE) + TILE_SIZE / 2;
-                var endY = Math.round((targetNode.y - CAMERA_OFFSET.y) * TILE_SIZE) + TILE_SIZE / 2;
-
                 ctx.moveTo(startX, startY);
-                ctx.lineTo(endX, endY);
+
+                for (var p = 0; p < path.length; p++) {
+                    var node = path[p];
+                    var nextX = Math.round((node.x - CAMERA_OFFSET.x) * TILE_SIZE) + TILE_SIZE / 2;
+                    var nextY = Math.round((node.y - CAMERA_OFFSET.y) * TILE_SIZE) + TILE_SIZE / 2;
+                    ctx.lineTo(nextX, nextY);
+                }
             }
         }
         ctx.stroke();
@@ -403,14 +424,6 @@ function mainProcess(): void {
         }
     }
 
-    // TODO: Fix the problem caused by the infinite world when drawing movement path debug lines
-    // if (DEBUG_DRAW) {
-    //     for (var ent of entities) {
-    //         for (var move of ent.entity.moveQueue) {
-    //             drawRect(move.x*TILE_SIZE,move.y*TILE_SIZE, TILE_SIZE,TILE_SIZE, "yellow");
-    //         }
-    //     }
-    // }
 
     // Draws a red box around the mouse onto the TileMap that follows the mouse
     var hoveredTileX = Math.floor(mousePos.x / TILE_SIZE + CAMERA_OFFSET.x);
