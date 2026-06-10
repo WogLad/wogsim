@@ -725,6 +725,7 @@ function mainProcess(): void {
 
     // DONE: Draw the entities.
     ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    ctx.imageSmoothingEnabled = false; // Must be re-applied every frame — clearRect can reset it in some browsers
     clearDrawBuffers();
 
     var viewStartX = Math.max(0, Math.floor(CAMERA_OFFSET.x));
