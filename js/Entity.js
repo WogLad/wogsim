@@ -26,10 +26,17 @@ class Entity {
         // Stagger initial check times so they start searching at different frames
         this.lastPathfindTime = performance.now() - Math.random() * this.pathfindCooldown;
     }
+    getTotalItemCount() {
+        return this.inventory.reduce((acc, entry) => acc + entry.count, 0);
+    }
     eatFood() {
-        var foodIdx = this.inventory.findIndex(item => item.name === "Apple" || item.name === "Fish" || item.name === "Berry");
+        var foodIdx = this.inventory.findIndex(entry => (entry.item.name === "Apple" || entry.item.name === "Fish" || entry.item.name === "Berry") && entry.count > 0);
         if (foodIdx !== -1) {
-            this.inventory.splice(foodIdx, 1);
+            var entry = this.inventory[foodIdx];
+            entry.count--;
+            if (entry.count <= 0) {
+                this.inventory.splice(foodIdx, 1);
+            }
             this.hunger = Math.max(0, this.hunger - 30);
             return true;
         }
@@ -57,11 +64,15 @@ class Entity {
         return Vector2(randomX, randomY);
     }
     addToInventory(item, count = 1) {
-        if (this.inventory.length >= INVENTORY_MAX_CAPACITY) {
+        if (this.getTotalItemCount() + count > INVENTORY_MAX_CAPACITY) {
             return false;
         }
-        for (var i = 0; i < count; i++) {
-            this.inventory.push(item);
+        var existing = this.inventory.find(entry => entry.item.name === item.name);
+        if (existing) {
+            existing.count += count;
+        }
+        else {
+            this.inventory.push({ item: item, count: count });
         }
         return true;
     }

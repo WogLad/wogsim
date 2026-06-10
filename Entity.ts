@@ -17,15 +17,25 @@ class Entity {
     stateText: string = "Idle";
 
     moveQueue: GridNode[] = [];
-    inventory: Item[] = [];
+    inventory: { item: Item, count: number }[] = [];
 
     process: () => void = () => {}; // Called every frame
     move: ((currentX: number, currentY: number) => Vector2) | null = (currentX: number, currentY: number) => {return Vector2(0,0)}; // Called every frame to move the entity if possible
 
+    getTotalItemCount(): number {
+        return this.inventory.reduce((acc, entry) => acc + entry.count, 0);
+    }
+
     eatFood(): boolean {
-        var foodIdx = this.inventory.findIndex(item => item.name === "Apple" || item.name === "Fish" || item.name === "Berry");
+        var foodIdx = this.inventory.findIndex(entry => 
+            (entry.item.name === "Apple" || entry.item.name === "Fish" || entry.item.name === "Berry") && entry.count > 0
+        );
         if (foodIdx !== -1) {
-            this.inventory.splice(foodIdx, 1);
+            var entry = this.inventory[foodIdx];
+            entry.count--;
+            if (entry.count <= 0) {
+                this.inventory.splice(foodIdx, 1);
+            }
             this.hunger = Math.max(0, this.hunger - 30);
             return true;
         }
@@ -63,11 +73,14 @@ class Entity {
     }
 
     addToInventory(item: Item, count: number = 1): boolean {
-        if (this.inventory.length >= INVENTORY_MAX_CAPACITY) {
+        if (this.getTotalItemCount() + count > INVENTORY_MAX_CAPACITY) {
             return false;
         }
-        for (var i = 0; i < count; i++) {
-            this.inventory.push(item);
+        var existing = this.inventory.find(entry => entry.item.name === item.name);
+        if (existing) {
+            existing.count += count;
+        } else {
+            this.inventory.push({ item: item, count: count });
         }
         return true;
     }

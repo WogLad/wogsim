@@ -39,8 +39,8 @@ class Human extends Entity {
         }
         else {
             // Resource drop-off override
-            var hasResources = this.inventory.some(item => !(item instanceof Tool));
-            var isFull = this.inventory.length >= INVENTORY_MAX_CAPACITY;
+            var hasResources = this.inventory.some(entry => !(entry.item instanceof Tool) && entry.count > 0);
+            var isFull = this.getTotalItemCount() >= INVENTORY_MAX_CAPACITY;
 
             if (hasResources && (isFull || this.stateText === "Returning to Storage")) {
                 this.stateText = "Returning to Storage";
@@ -48,20 +48,20 @@ class Human extends Entity {
                 //@ts-ignore
                 if (Math.abs(currentX - STORAGE_POS.x) <= 1 && Math.abs(currentY - STORAGE_POS.y) <= 1) {
                     this.stateText = "Depositing Resources";
-                    for (var item of this.inventory) {
-                        if (!(item instanceof Tool)) {
-                            var nameLower = item.name.toLowerCase();
+                    for (var entry of this.inventory) {
+                        if (!(entry.item instanceof Tool)) {
+                            var nameLower = entry.item.name.toLowerCase();
                             //@ts-ignore
                             if (nameLower in Stockpile) {
                                 //@ts-ignore
-                                Stockpile[nameLower]++;
+                                Stockpile[nameLower] += entry.count;
                             } else {
                                 //@ts-ignore
-                                Stockpile.wood++;
+                                Stockpile.wood += entry.count;
                             }
                         }
                     }
-                    this.inventory = this.inventory.filter(item => item instanceof Tool);
+                    this.inventory = this.inventory.filter(entry => entry.item instanceof Tool);
                     this.stateText = "Idle";
                     return Vector2(0, 0);
                 } else {

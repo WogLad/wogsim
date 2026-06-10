@@ -156,7 +156,7 @@ class TestTools {
         if (ent.inventory.length > 0) {
             inventoryHtml = `
                 <div class="inventory-tags">
-                    ${ent.inventory.map(item => `<span class="inventory-tag">${item.name}</span>`).join("")}
+                    ${ent.inventory.map(entry => `<span class="inventory-tag">${entry.item.name} x${entry.count}</span>`).join("")}
                 </div>
             `;
         }
@@ -205,7 +205,7 @@ class TestTools {
                     <span class="detail-label">Path Cooldown:</span>
                     <span class="detail-val">${pathfindCooldownVal}</span>
                 </div>
-                <div class="sub-label">Inventory (${ent.inventory.length}/${20})</div>
+                <div class="sub-label">Inventory (${ent.getTotalItemCount()}/${20})</div>
                 <div id="liveInspectorInventory">${inventoryHtml}</div>
             </div>
         `;
@@ -240,13 +240,30 @@ class TestTools {
             if (ent.inventory.length > 0) {
                 inventoryHtml = `
                     <div class="inventory-tags">
-                        ${ent.inventory.map(item => `<span class="inventory-tag">${item.name}</span>`).join("")}
+                        ${ent.inventory.map(entry => `<span class="inventory-tag">${entry.item.name} x${entry.count}</span>`).join("")}
                     </div>
                 `;
             }
             const existingTags = inventoryEl.querySelectorAll(".inventory-tag");
+            var isDiff = false;
             if (existingTags.length !== ent.inventory.length) {
+                isDiff = true;
+            }
+            else {
+                for (var idx = 0; idx < existingTags.length; idx++) {
+                    var expectedText = `${ent.inventory[idx].item.name} x${ent.inventory[idx].count}`;
+                    if (existingTags[idx].innerText !== expectedText) {
+                        isDiff = true;
+                        break;
+                    }
+                }
+            }
+            if (isDiff) {
                 inventoryEl.innerHTML = inventoryHtml;
+            }
+            const labelEl = inventoryEl.previousElementSibling;
+            if (labelEl && labelEl.classList.contains("sub-label") && labelEl.textContent && labelEl.textContent.startsWith("Inventory")) {
+                labelEl.innerText = `Inventory (${ent.getTotalItemCount()}/20)`;
             }
         }
     }

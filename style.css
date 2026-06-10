@@ -1,4 +1,5 @@
-html, body {
+html,
+body {
     margin: 0;
     padding: 0;
     width: 100%;
@@ -149,7 +150,8 @@ img {
     color: #e0e0ff;
     border-radius: 6px;
     cursor: pointer;
-    filter: none; /* Override default button filter drop-shadow */
+    filter: none;
+    /* Override default button filter drop-shadow */
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -261,8 +263,15 @@ img {
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(4px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .detail-row {
