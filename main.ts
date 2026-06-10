@@ -5,13 +5,14 @@ var ctx: CanvasRenderingContext2D = canvas.getContext("2d", { alpha: false }) as
 const CANVAS_WIDTH: number = 960;
 const CANVAS_HEIGHT: number = 540;
 const CANVAS_BG_COLOR: string = "#f0ffff";
-const TILE_SIZE: number = 15;
+const BASE_TILE_SIZE: number = 15;
+var TILE_SIZE: number = 15;
 const OUTLINE_THICKNESS = 2; // <DEPRECATED> Thickness of the lines that make up the box surrounding the mouse
 // WORLD PROPERTIES
 const WORLD_WIDTH: number = 960 * 5;
 const WORLD_HEIGHT: number = 540 * 5;
-const X_TILES: number = Math.floor(WORLD_WIDTH / TILE_SIZE);
-const Y_TILES: number = Math.floor(WORLD_HEIGHT / TILE_SIZE);
+const X_TILES: number = Math.floor(WORLD_WIDTH / BASE_TILE_SIZE);
+const Y_TILES: number = Math.floor(WORLD_HEIGHT / BASE_TILE_SIZE);
 var CAMERA_OFFSET: Vector2 = Vector2(
     Math.floor(X_TILES / 2) - Math.floor(CANVAS_WIDTH / TILE_SIZE / 2),
     Math.floor(Y_TILES / 2) - Math.floor(CANVAS_HEIGHT / TILE_SIZE / 2)
@@ -320,12 +321,12 @@ function drawTileToOffscreen(x: number, y: number): void {
     var tile = world[x] ? world[x][y] : undefined;
     if (!tile) return;
 
-    var screenX = x * TILE_SIZE;
-    var screenY = y * TILE_SIZE;
+    var screenX = x * BASE_TILE_SIZE;
+    var screenY = y * BASE_TILE_SIZE;
 
     // Draw tile terrain color (ignore entities since they are dynamic)
     offscreenCtx.fillStyle = tile.type as string;
-    offscreenCtx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+    offscreenCtx.fillRect(screenX, screenY, BASE_TILE_SIZE, BASE_TILE_SIZE);
 
     // Draw worldObject sprite
     var worldObjs = tile.worldObjects;
@@ -334,9 +335,9 @@ function drawTileToOffscreen(x: number, y: number): void {
         var spriteName = worldObjs[objLen - 1].name;
         var spriteImg = sprites.get(spriteName);
         if (spriteImg && spriteImg.complete) {
-            offscreenCtx.drawImage(spriteImg, screenX, screenY, TILE_SIZE, TILE_SIZE);
+            offscreenCtx.drawImage(spriteImg, screenX, screenY, BASE_TILE_SIZE, BASE_TILE_SIZE);
         } else {
-            drawProceduralObject(offscreenCtx, spriteName, screenX, screenY, TILE_SIZE);
+            drawProceduralObject(offscreenCtx, spriteName, screenX, screenY, BASE_TILE_SIZE);
         }
     }
 }
@@ -615,11 +616,13 @@ function mainProcess(): void {
         ctx.setLineDash([]); // Reset line dash
     } else {
         // Fast path: blit terrain background and structures directly from the offscreen canvas
-        var srcX = Math.round(CAMERA_OFFSET.x * TILE_SIZE);
-        var srcY = Math.round(CAMERA_OFFSET.y * TILE_SIZE);
+        var srcX = Math.round(CAMERA_OFFSET.x * BASE_TILE_SIZE);
+        var srcY = Math.round(CAMERA_OFFSET.y * BASE_TILE_SIZE);
+        var srcW = Math.round((CANVAS_WIDTH / TILE_SIZE) * BASE_TILE_SIZE);
+        var srcH = Math.round((CANVAS_HEIGHT / TILE_SIZE) * BASE_TILE_SIZE);
         ctx.drawImage(
             offscreenCanvas,
-            srcX, srcY, CANVAS_WIDTH, CANVAS_HEIGHT,
+            srcX, srcY, srcW, srcH,
             0, 0, CANVAS_WIDTH, CANVAS_HEIGHT
         );
 
@@ -671,9 +674,9 @@ function mainProcess(): void {
 
                 textValDraws.push(letter);
                 textXDraws.push(cx);
-                textYDraws.push(cy + 3.5);
+                textYDraws.push(cy + TILE_SIZE * 0.23);
                 textColorDraws.push(textCol);
-                textFontDraws.push("bold 9px sans-serif");
+                textFontDraws.push(`bold ${Math.max(6, Math.round(TILE_SIZE * 0.6))}px sans-serif`);
             }
         }
     }

@@ -63,3 +63,21 @@ canvas.addEventListener("pointerdown", (e) => {
 canvas.addEventListener("pointerup", (e) => {
     isMouseDown = false;
 });
+canvas.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    var zoomFactor = 1.15;
+    var oldTileSize = TILE_SIZE;
+    // Get mouse position relative to world coordinates before zoom
+    var mouseWorldX = mousePos.x / oldTileSize + CAMERA_OFFSET.x;
+    var mouseWorldY = mousePos.y / oldTileSize + CAMERA_OFFSET.y;
+    if (e.deltaY < 0) {
+        // Zoom in
+        TILE_SIZE = Math.min(60, TILE_SIZE * zoomFactor);
+    }
+    else {
+        // Zoom out
+        TILE_SIZE = Math.max(4, TILE_SIZE / zoomFactor);
+    }
+    // Adjust camera offset to zoom towards the mouse cursor
+    setCameraOffset(mouseWorldX - mousePos.x / TILE_SIZE, mouseWorldY - mousePos.y / TILE_SIZE);
+}, { passive: false });
