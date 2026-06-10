@@ -4,14 +4,64 @@ class Cow extends Entity {
         super(true, true, "#f5f5f5"); // Off-white/spotted background
         /** The radius of the search square that is used to find the cow's next position */
         this.radarLength = 8;
+        /** Tracks whether this cow is inside a fenced pen (updated each move tick) */
+        this.isPenned = false;
+        /** Timestamp of last successful feed from town hall stockpile */
+        this.lastFeedTime = 0;
         this.move = (currentX, currentY) => {
+            // Detect if this cow is inside a fenced pen by checking adjacent tiles
+            this.isPenned = false;
+            var checkOffsets = [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1]];
+            for (var ci = 0; ci < checkOffsets.length; ci++) {
+                var nx = currentX + checkOffsets[ci][0];
+                var ny = currentY + checkOffsets[ci][1];
+                if (world[nx] && world[nx][ny] && world[nx][ny].worldObjects.some(o => o.name === "fence")) {
+                    this.isPenned = true;
+                    break;
+                }
+            }
             // Hunger ticking
-            this.hunger = Math.min(100, this.hunger + 0.25); // Slightly slower than sheep
+            this.hunger = Math.min(100, this.hunger + 0.02); // Slightly slower than sheep
             if (this.hunger >= 100) {
                 this.health = Math.max(0, this.health - 2);
             }
             else {
                 this.health = Math.min(100, this.health + 0.1);
+            }
+            // Penned animals eat from the nearest town hall stockpile every 20 seconds
+            if (this.isPenned) {
+                var feedNow = performance.now();
+                if (feedNow - this.lastFeedTime >= 20000) {
+                    // Find nearest town_hall that has food
+                    var hallPos = this.findNearest(currentX, currentY, 20, (tile) => {
+                        return tile.worldObjects.some(o => o.name === "town_hall" &&
+                            o.stockpile !== undefined &&
+                            ((o.stockpile["wheat"] || 0) > 0 || (o.stockpile["apple"] || 0) > 0 || (o.stockpile["berry"] || 0) > 0));
+                    });
+                    if (hallPos) {
+                        var hallTile = world[hallPos.x][hallPos.y];
+                        var hallObj = hallTile.worldObjects.find(o => o.name === "town_hall" && o.stockpile !== undefined);
+                        if (hallObj && hallObj.stockpile) {
+                            var sp = hallObj.stockpile;
+                            if ((sp["wheat"] || 0) > 0) {
+                                sp["wheat"]--;
+                            }
+                            else if ((sp["apple"] || 0) > 0) {
+                                sp["apple"]--;
+                            }
+                            else {
+                                sp["berry"]--;
+                            }
+                            this.hunger = Math.max(0, this.hunger - 40);
+                            this.lastFeedTime = feedNow;
+                            this.stateText = "Grazing";
+                        }
+                    }
+                    else {
+                        // No food available in stockpile — animal goes hungry
+                        this.stateText = "Hungry";
+                    }
+                }
             }
             if (this.health <= 0) {
                 this.stateText = "Dead";
@@ -61,8 +111,8 @@ class Cow extends Entity {
                     }
                 }
             }
-            // 2. If hungry, eat grass/wheat/shrub on current tile
-            if (this.hunger > 30) {
+            // 2. If hungry and NOT penned, eat grass/wheat/shrub in the wild
+            if (this.hunger > 30 && !this.isPenned) {
                 this.stateText = "Searching Food";
                 var currentTile = world[currentX][currentY];
                 var foodIdx = currentTile.worldObjects.findIndex(o => o.name === "shrub" || o.name === "wheat");
@@ -96,5 +146,7 @@ class Cow extends Entity {
             return deviation;
         };
         this.stateText = "Grazing";
+        // Stagger initial feed timers so all animals don't hit the stockpile simultaneously
+        this.lastFeedTime = performance.now() - Math.random() * 20000;
     }
 }

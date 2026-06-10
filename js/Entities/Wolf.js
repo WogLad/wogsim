@@ -6,7 +6,7 @@ class Wolf extends Entity {
         this.radarLength = 10;
         this.move = (currentX, currentY) => {
             // Hunger ticking
-            this.hunger = Math.min(100, this.hunger + 0.4);
+            this.hunger = Math.min(100, this.hunger + 0.04);
             if (this.hunger >= 100) {
                 this.health = Math.max(0, this.health - 2);
             }

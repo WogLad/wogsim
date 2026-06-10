@@ -9,7 +9,8 @@ class WorldObject {
                 stone: 0,
                 wheat: 0,
                 apple: 0,
-                berry: 0
+                berry: 0,
+                gold: 0
             };
         }
     }

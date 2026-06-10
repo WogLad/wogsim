@@ -15,6 +15,8 @@ class Entity {
     health: number = 100;
     hunger: number = 0;
     stateText: string = "Idle";
+    gold: number = 0;
+    ownsHouse: boolean = false;
 
     moveQueue: GridNode[] = [];
     inventory: { item: Item, count: number }[] = [];

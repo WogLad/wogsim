@@ -9,7 +9,7 @@ class Wolf extends Entity {
 
     move: ((currentX: number, currentY: number) => Vector2) | null = (currentX, currentY) => {
         // Hunger ticking
-        this.hunger = Math.min(100, this.hunger + 0.4);
+        this.hunger = Math.min(100, this.hunger + 0.04);
         if (this.hunger >= 100) {
             this.health = Math.max(0, this.health - 2);
         } else {

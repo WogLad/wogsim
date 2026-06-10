@@ -21,8 +21,23 @@ canvas.addEventListener("click", (e) => {
     }
     if (!handled) {
         var clickTile = world[clickX] ? world[clickX][clickY] : undefined;
-        if (clickTile && tileInspectorDiv) {
-            tileInspectorDiv.innerHTML = clickTile.getTileInspectorInfoDiv().innerHTML;
+        if (clickTile) {
+            var houseObj = clickTile.worldObjects.find(o => o.name === "house");
+            if (houseObj && houseObj.ownerId) {
+                //@ts-ignore
+                inspectedHouseOwnerId = houseObj.ownerId;
+            }
+            else {
+                //@ts-ignore
+                inspectedHouseOwnerId = null;
+            }
+            if (tileInspectorDiv) {
+                tileInspectorDiv.innerHTML = clickTile.getTileInspectorInfoDiv().innerHTML;
+            }
+        }
+        else {
+            //@ts-ignore
+            inspectedHouseOwnerId = null;
         }
     }
 });

@@ -176,6 +176,10 @@ class TestTools {
                     <span class="detail-val highlight" id="liveInspectorStatus">${ent.stateText}</span>
                 </div>
                 <div class="detail-row">
+                    <span class="detail-label">Gold:</span>
+                    <span class="detail-val" id="liveInspectorGold" style="color: #ffd700; font-weight: bold;">${ent.gold}</span>
+                </div>
+                <div class="detail-row">
                     <span class="detail-label">Health:</span>
                     <span class="detail-val" id="liveInspectorHealth" style="color: #ff3366; font-weight: bold;">${Math.round(ent.health)}%</span>
                 </div>
@@ -219,6 +223,9 @@ class TestTools {
         const statusEl = document.getElementById("liveInspectorStatus");
         if (statusEl)
             statusEl.innerText = ent.stateText;
+        const goldEl = document.getElementById("liveInspectorGold");
+        if (goldEl)
+            goldEl.innerText = ent.gold.toString();
         const healthEl = document.getElementById("liveInspectorHealth");
         if (healthEl)
             healthEl.innerText = `${Math.round(ent.health)}%`;

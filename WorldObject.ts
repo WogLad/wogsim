@@ -1,5 +1,6 @@
 class WorldObject {
     name: string;
+    ownerId?: string;
     stockpile?: { [key: string]: number };
 
     constructor(name: string) {
@@ -11,7 +12,8 @@ class WorldObject {
                 stone: 0,
                 wheat: 0,
                 apple: 0,
-                berry: 0
+                berry: 0,
+                gold: 0
             };
         }
     }

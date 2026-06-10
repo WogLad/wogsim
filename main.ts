@@ -26,6 +26,10 @@ const TILE_ITEM_LIMIT: number = 10;
 var MOVEMENT_DELAY: number = 15;
 const INVENTORY_MAX_CAPACITY: number = 20;
 
+// Village settings and spawn configuration
+var townHallPositions: Vector2[] = [];
+var HUMAN_SPAWN_INTERVAL: number = 100; // Tweak this value to change runtime spawn rate (lower = faster spawn)
+
 canvas.height = CANVAS_HEIGHT;
 canvas.width = CANVAS_WIDTH;
 
@@ -45,6 +49,8 @@ canvas.onpointermove = (e) => {
     mousePos.x = e.clientX - rect.left; //x position within the element.
     mousePos.y = e.clientY - rect.top;  //y position within the element.
 }
+
+var inspectedHouseOwnerId: string | null = null;
 
 var entities: EntityData[] = [];
 var world: WorldTile[][] = [];
@@ -171,6 +177,7 @@ function generateVillages(count: number): void {
         centerTile.type = TileType.GROUND;
         centerTile.worldObjects = [new WorldObject("town_hall")];
         centerTile.items = [];
+        townHallPositions.push(Vector2(cx, cy));
 
         let campfireTile = world[cx + 3] ? world[cx + 3][cy] : null;
         if (campfireTile) {
@@ -179,21 +186,7 @@ function generateVillages(count: number): void {
             campfireTile.items = [];
         }
 
-        let houseOffsets = [
-            { x: -3, y: -3 },
-            { x: -3, y: 3 },
-            { x: 3, y: -3 }
-        ];
-        for (var offset of houseOffsets) {
-            let hx = cx + offset.x;
-            let hy = cy + offset.y;
-            if (world[hx] && world[hx][hy]) {
-                let tile = world[hx][hy];
-                tile.type = TileType.GROUND;
-                tile.worldObjects = [new WorldObject("house")];
-                tile.items = [];
-            }
-        }
+        // Initial house generation removed. Houses will be built by villagers.
 
         for (let r = -4; r <= 4; r++) {
             let tx = cx + r;
@@ -252,10 +245,10 @@ function generateVillages(count: number): void {
         }
 
         let villagerSpawnOffsets = [
-            { x: -1, y: -1 },
-            { x: 1, y: -1 },
-            { x: -1, y: 1 },
-            { x: 1, y: 1 }
+            { x: -1, y: -1 }, { x: 1, y: -1 }, { x: -1, y: 1 }, { x: 1, y: 1 },
+            { x: -2, y: -2 }, { x: 2, y: -2 }, { x: -2, y: 2 }, { x: -2, y: -1 },
+            { x: -2, y: 1 }, { x: -1, y: -2 }, { x: 1, y: -2 }, { x: -2, y: 0 },
+            { x: -1, y: 0 }, { x: 0, y: -1 }, { x: 0, y: 1 }, { x: 0, y: -2 }
         ];
         for (let i = 0; i < villagerSpawnOffsets.length; i++) {
             let offset = villagerSpawnOffsets[i];
@@ -267,11 +260,11 @@ function generateVillages(count: number): void {
                 tile.worldObjects = [];
 
                 let villager: Human;
-                if (i === 0) {
+                if (i % 4 === 0) {
                     villager = new Woodcutter();
-                } else if (i === 1) {
+                } else if (i % 4 === 1) {
                     villager = new Fisherman();
-                } else if (i === 2) {
+                } else if (i % 4 === 2) {
                     //@ts-ignore
                     villager = new Miner();
                 } else {
@@ -625,7 +618,7 @@ function updateStockpileUI() {
         }
     }
 
-    const resources = ["wood", "fish", "stone", "wheat", "apple", "berry"];
+    const resources = ["wood", "fish", "stone", "wheat", "apple", "berry", "gold"];
     const labelEl = document.querySelector("#stockpileGroup label") as HTMLElement;
     if (labelEl && labelEl.innerText !== activeStockpileName) {
         labelEl.innerText = activeStockpileName;
@@ -874,6 +867,16 @@ function mainProcess(): void {
                 var cx = screenX + TILE_SIZE / 2;
                 var cy = screenY + TILE_SIZE / 2;
 
+                if (e.id === inspectedHouseOwnerId) {
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, TILE_SIZE * 0.8, 0, Math.PI * 2);
+                    ctx.fillStyle = "rgba(255, 255, 0, 0.5)";
+                    ctx.fill();
+                    ctx.strokeStyle = "yellow";
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+
                 // Draw entity background circle for high aesthetic readability
                 ctx.beginPath();
                 ctx.arc(cx, cy, TILE_SIZE * 0.42, 0, Math.PI * 2);
@@ -975,6 +978,41 @@ function mainProcess(): void {
         ticks++;
         if (ticks == 1000000000) {
             ticks = 0;
+        }
+
+        // Runtime Spawning of Humans at Town Halls
+        if (ticks % HUMAN_SPAWN_INTERVAL === 0) {
+            for (let thPos of townHallPositions) {
+                let spawned = false;
+                for (let dx = -2; dx <= 2 && !spawned; dx++) {
+                    for (let dy = -2; dy <= 2 && !spawned; dy++) {
+                        if (dx === 0 && dy === 0) continue;
+                        let vx = thPos.x + dx;
+                        let vy = thPos.y + dy;
+                        if (world[vx] && world[vx][vy]) {
+                            let tile = world[vx][vy];
+                            if (tile.canBeTraversed() && tile.entities.length < TILE_ENTITY_LIMIT && tile.worldObjects.length === 0) {
+                                let roll = Math.floor(Math.random() * 4);
+                                let villager: Human;
+                                if (roll === 0) {
+                                    villager = new Woodcutter();
+                                } else if (roll === 1) {
+                                    villager = new Fisherman();
+                                } else if (roll === 2) {
+                                    //@ts-ignore
+                                    villager = new Miner();
+                                } else {
+                                    //@ts-ignore
+                                    villager = new Farmer();
+                                }
+                                tile.addEntity(villager);
+                                entities.push({ entity: villager, pos: Vector2(vx, vy) });
+                                spawned = true;
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 

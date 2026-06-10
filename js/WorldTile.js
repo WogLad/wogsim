@@ -109,6 +109,15 @@ class WorldTile {
         inspectorText += `entity_count: ${this.entities.length}<br>`;
         inspectorText += `item_count: ${this.items.length}<br>`;
         inspectorText += `world_object_count: ${this.worldObjects.length}`;
+        var houseObj = this.worldObjects.find(o => o.name === "house");
+        if (houseObj && houseObj.ownerId) {
+            //@ts-ignore
+            var ownerData = entities.find(e => e.entity.id === houseObj.ownerId);
+            if (ownerData) {
+                var name = ownerData.entity.constructor.name;
+                inspectorText += `<br><span style="color: yellow; font-weight: bold;">Owner: ${name}</span>`;
+            }
+        }
         var div = document.createElement("div");
         div.innerHTML = inspectorText;
         return div;

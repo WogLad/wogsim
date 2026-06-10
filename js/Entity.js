@@ -11,6 +11,8 @@ class Entity {
         this.health = 100;
         this.hunger = 0;
         this.stateText = "Idle";
+        this.gold = 0;
+        this.ownsHouse = false;
         this.moveQueue = [];
         this.inventory = [];
         this.process = () => { }; // Called every frame
