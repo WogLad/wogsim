@@ -7,13 +7,24 @@ const CANVAS_HEIGHT: number = 540;
 const CANVAS_BG_COLOR: string = "#f0ffff";
 const TILE_SIZE: number = 15;
 const OUTLINE_THICKNESS = 2; // <DEPRECATED> Thickness of the lines that make up the box surrounding the mouse
-var CAMERA_OFFSET: Vector2 = Vector2(0, 0);
-
 // WORLD PROPERTIES
 const WORLD_WIDTH: number = 960 * 5;
 const WORLD_HEIGHT: number = 540 * 5;
 const X_TILES: number = Math.floor(WORLD_WIDTH / TILE_SIZE);
 const Y_TILES: number = Math.floor(WORLD_HEIGHT / TILE_SIZE);
+var CAMERA_OFFSET: Vector2 = Vector2(
+    Math.floor(X_TILES / 2) - Math.floor(CANVAS_WIDTH / TILE_SIZE / 2),
+    Math.floor(Y_TILES / 2) - Math.floor(CANVAS_HEIGHT / TILE_SIZE / 2)
+);
+var Stockpile: { [key: string]: number } = {
+    wood: 0,
+    fish: 0,
+    stone: 0,
+    wheat: 0,
+    apple: 0,
+    berry: 0
+};
+var STORAGE_POS: Vector2 = Vector2(Math.floor(X_TILES / 2), Math.floor(Y_TILES / 2));
 var PAUSED: boolean = false;
 const TILE_ENTITY_LIMIT: number = 2;
 const TILE_ITEM_LIMIT: number = 10;
@@ -85,17 +96,40 @@ function init(): void {
         world[x] = [];
         for (var y = 0; y < Y_TILES; y++) {
             var tile: WorldTile = new WorldTile(x, y);
-            if (Math.random() < 0.002 && tile.type != TileType.WATER && tile.type != TileType.DARK_WATER) {
-                var h: Human;
-                var humanTypeRoll: number = Math.random();
-                if (humanTypeRoll < 0.5) {
-                    h = new Woodcutter();
+            if (x === STORAGE_POS.x && y === STORAGE_POS.y) {
+                tile.type = TileType.GROUND;
+                tile.worldObjects = [new WorldObject("storage_pile")];
+                tile.items = [];
+            }
+            else if (tile.type != TileType.WATER && tile.type != TileType.DARK_WATER) {
+                var spawnRoll = Math.random();
+                if (spawnRoll < 0.0015) { // 0.15% chance to spawn a Human
+                    var h: Human;
+                    var humanTypeRoll = Math.random();
+                    if (humanTypeRoll < 0.25) {
+                        h = new Woodcutter();
+                    } else if (humanTypeRoll < 0.5) {
+                        h = new Fisherman();
+                    } else if (humanTypeRoll < 0.75) {
+                        //@ts-ignore
+                        h = new Miner();
+                    } else {
+                        //@ts-ignore
+                        h = new Farmer();
+                    }
+                    tile.addEntity(h);
+                    entities.push({ entity: h, pos: Vector2(x, y) });
+                } else if (spawnRoll < 0.0025) { // 0.10% chance to spawn a Sheep
+                    //@ts-ignore
+                    var s = new Sheep();
+                    tile.addEntity(s);
+                    entities.push({ entity: s, pos: Vector2(x, y) });
+                } else if (spawnRoll < 0.0028) { // 0.03% chance to spawn a Wolf
+                    //@ts-ignore
+                    var w = new Wolf();
+                    tile.addEntity(w);
+                    entities.push({ entity: w, pos: Vector2(x, y) });
                 }
-                else {
-                    h = new Fisherman();
-                }
-                tile.addEntity(h);
-                entities.push({ entity: h, pos: Vector2(x, y) });
             }
             world[x][y] = tile;
         }
@@ -137,6 +171,17 @@ function drawProceduralObject(ctx: CanvasRenderingContext2D, name: string, x: nu
         ctx.beginPath();
         ctx.arc(cx, y + size * 0.4, size * 0.35, 0, Math.PI * 2);
         ctx.fill();
+    }
+    else if (name === "storage_pile") {
+        // Draw a nice chest/crate or pile of items
+        ctx.fillStyle = "#8b5a2b"; // Brown box
+        ctx.fillRect(x + size * 0.15, y + size * 0.25, size * 0.7, size * 0.65);
+        
+        ctx.fillStyle = "#cd853f"; // Lid highlight
+        ctx.fillRect(x + size * 0.15, y + size * 0.25, size * 0.7, size * 0.18);
+        
+        ctx.fillStyle = "#ffd700"; // Gold latch
+        ctx.fillRect(cx - size * 0.08, y + size * 0.4, size * 0.16, size * 0.15);
     }
     else if (name === "pine_tree") {
         // Pine tree: brown trunk + stacked green triangles
@@ -345,6 +390,20 @@ function clearDrawBuffers(): void {
     textFontDraws.length = 0;
 }
 
+var stockpileElements: { [key: string]: HTMLElement | null } = {};
+function updateStockpileUI() {
+    const resources = ["wood", "fish", "stone", "wheat", "apple", "berry"];
+    for (const res of resources) {
+        if (!stockpileElements[res]) {
+            stockpileElements[res] = document.getElementById("stockpile" + res.charAt(0).toUpperCase() + res.slice(1));
+        }
+        const el = stockpileElements[res];
+        if (el) {
+            el.innerText = Stockpile[res].toString();
+        }
+    }
+}
+
 // Main loop
 var ticks: number = 0;
 function mainProcess(): void {
@@ -374,10 +433,34 @@ function mainProcess(): void {
     }
 
     if (!PAUSED) {
+        updateStockpileUI();
+
         for (var i = 0; i < entities.length; i++) {
             var ent = entities[i];
             var e = ent.entity;
             var pos = ent.pos;
+
+            // Handle death
+            if (e.health <= 0) {
+                var oldTile = world[pos.x][pos.y];
+                oldTile.removeEntity(oldTile.entities.indexOf(e));
+                entities.splice(i, 1);
+                i--;
+                //@ts-ignore
+                if (typeof TestTools !== "undefined") {
+                    //@ts-ignore
+                    TestTools.updateStats();
+                    //@ts-ignore
+                    if (TestTools.inspectedEntity === e) {
+                        //@ts-ignore
+                        TestTools.inspectedEntity = null;
+                        //@ts-ignore
+                        TestTools.updateInspector();
+                    }
+                }
+                continue;
+            }
+
             e.process();
             // Movement handler (Staggered to distribute heavy pathfinding load across MOVEMENT_DELAY frames)
             if (e.move != null && (ticks + i) % MOVEMENT_DELAY == 0) {
@@ -546,16 +629,51 @@ function mainProcess(): void {
             var pos = ent.pos;
             if (pos.x >= viewStartX && pos.x < viewEndX && pos.y >= viewStartY && pos.y < viewEndY) {
                 var e = ent.entity;
-                if (e instanceof Human && e.professionLetter != "") {
-                    var screenX = Math.round((pos.x - CAMERA_OFFSET.x) * TILE_SIZE);
-                    var screenY = Math.round((pos.y - CAMERA_OFFSET.y) * TILE_SIZE);
+                var screenX = Math.round((pos.x - CAMERA_OFFSET.x) * TILE_SIZE);
+                var screenY = Math.round((pos.y - CAMERA_OFFSET.y) * TILE_SIZE);
+                var cx = screenX + TILE_SIZE / 2;
+                var cy = screenY + TILE_SIZE / 2;
 
-                    textValDraws.push(e.professionLetter);
-                    textXDraws.push(screenX + (TILE_SIZE / 2));
-                    textYDraws.push(screenY + (TILE_SIZE / 1.4));
-                    textColorDraws.push("black");
-                    textFontDraws.push("10px");
+                // Draw entity background circle for high aesthetic readability
+                ctx.beginPath();
+                ctx.arc(cx, cy, TILE_SIZE * 0.42, 0, Math.PI * 2);
+                if (e instanceof Woodcutter) {
+                    ctx.fillStyle = "#ff7b7b"; // Soft red
+                } else if (e instanceof Fisherman) {
+                    ctx.fillStyle = "#7bc0ff"; // Soft blue
+                } else if (e.constructor.name === "Miner") {
+                    ctx.fillStyle = "#d0d0d0"; // Soft grey
+                } else if (e.constructor.name === "Farmer") {
+                    ctx.fillStyle = "#e5ff82"; // Soft yellow-green
+                } else if (e.constructor.name === "Sheep") {
+                    ctx.fillStyle = "#ffffff"; // Soft white
+                } else if (e.constructor.name === "Wolf") {
+                    ctx.fillStyle = "#666666"; // Dark grey
+                } else {
+                    ctx.fillStyle = "#ffdd80"; // Peach
                 }
+                ctx.fill();
+                ctx.strokeStyle = "rgba(0,0,0,0.5)";
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                // Build entity text display
+                var letter = "?";
+                var textCol = "black";
+                if (e instanceof Human && e.professionLetter != "") {
+                    letter = e.professionLetter;
+                } else if (e.constructor.name === "Sheep") {
+                    letter = "S";
+                } else if (e.constructor.name === "Wolf") {
+                    letter = "X";
+                    textCol = "#ff2222"; // Red X for wolf
+                }
+
+                textValDraws.push(letter);
+                textXDraws.push(cx);
+                textYDraws.push(cy + 3.5);
+                textColorDraws.push(textCol);
+                textFontDraws.push("bold 9px sans-serif");
             }
         }
     }

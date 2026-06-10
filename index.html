@@ -27,9 +27,13 @@
             
             <div id="entitySelectGroup" class="control-group hidden">
                 <label>Select Entity</label>
-                <div class="btn-group">
-                    <button id="entityWoodcutterBtn" class="entity-btn active">Woodcutter (W)</button>
-                    <button id="entityFishermanBtn" class="entity-btn">Fisherman (F)</button>
+                <div class="btn-group" style="flex-wrap: wrap; gap: 4px;">
+                    <button id="entityWoodcutterBtn" class="entity-btn active" style="flex: 1 1 45%;">Woodcutter (W)</button>
+                    <button id="entityFishermanBtn" class="entity-btn" style="flex: 1 1 45%;">Fisherman (F)</button>
+                    <button id="entityMinerBtn" class="entity-btn" style="flex: 1 1 45%;">Miner (M)</button>
+                    <button id="entityFarmerBtn" class="entity-btn" style="flex: 1 1 45%;">Farmer (P)</button>
+                    <button id="entitySheepBtn" class="entity-btn" style="flex: 1 1 45%;">Sheep (S)</button>
+                    <button id="entityWolfBtn" class="entity-btn" style="flex: 1 1 45%;">Wolf (X)</button>
                 </div>
             </div>
 
@@ -42,6 +46,20 @@
                         <div id="devInspectorEntitiesList"></div>
                     </div>
                     <div id="devInspectorDetails" class="hidden"></div>
+                </div>
+            </div>
+
+            <div id="stockpileGroup" class="control-group">
+                <label>📦 Global Stockpiles</label>
+                <div class="inspector-card" style="font-family: monospace; font-size: 11px;">
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;" id="stockpileList">
+                        <div>Wood: <span id="stockpileWood" style="color: #00ffcc; font-weight: bold;">0</span></div>
+                        <div>Fish: <span id="stockpileFish" style="color: #00ffcc; font-weight: bold;">0</span></div>
+                        <div>Stone: <span id="stockpileStone" style="color: #00ffcc; font-weight: bold;">0</span></div>
+                        <div>Wheat: <span id="stockpileWheat" style="color: #00ffcc; font-weight: bold;">0</span></div>
+                        <div>Apple: <span id="stockpileApple" style="color: #00ffcc; font-weight: bold;">0</span></div>
+                        <div>Berry: <span id="stockpileBerry" style="color: #00ffcc; font-weight: bold;">0</span></div>
+                    </div>
                 </div>
             </div>
             
@@ -91,6 +109,10 @@
     <script defer src="js/Entities/Human.js"></script>
     <script defer src="js/Entities/Woodcutter.js"></script>
     <script defer src="js/Entities/Fisherman.js"></script>
+    <script defer src="js/Entities/Miner.js"></script>
+    <script defer src="js/Entities/Farmer.js"></script>
+    <script defer src="js/Entities/Sheep.js"></script>
+    <script defer src="js/Entities/Wolf.js"></script>
 
     <!-- Main Final Scripts -->
     <script defer src="js/main.js"></script>

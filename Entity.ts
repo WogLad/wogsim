@@ -12,11 +12,25 @@ class Entity {
     isLiving: boolean;
     isMovable: boolean;
 
+    health: number = 100;
+    hunger: number = 0;
+    stateText: string = "Idle";
+
     moveQueue: GridNode[] = [];
     inventory: Item[] = [];
 
     process: () => void = () => {}; // Called every frame
     move: ((currentX: number, currentY: number) => Vector2) | null = (currentX: number, currentY: number) => {return Vector2(0,0)}; // Called every frame to move the entity if possible
+
+    eatFood(): boolean {
+        var foodIdx = this.inventory.findIndex(item => item.name === "Apple" || item.name === "Fish" || item.name === "Berry");
+        if (foodIdx !== -1) {
+            this.inventory.splice(foodIdx, 1);
+            this.hunger = Math.max(0, this.hunger - 30);
+            return true;
+        }
+        return false;
+    }
 
     constructor(living: boolean, movable: boolean, viewColor: string) {
         this.isLiving = living;

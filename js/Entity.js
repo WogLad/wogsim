@@ -8,6 +8,9 @@ class Entity {
         this.ticksAlive = 0;
         this.lastPathfindTime = 0;
         this.pathfindCooldown = 2000; // 2 seconds in milliseconds
+        this.health = 100;
+        this.hunger = 0;
+        this.stateText = "Idle";
         this.moveQueue = [];
         this.inventory = [];
         this.process = () => { }; // Called every frame
@@ -22,6 +25,15 @@ class Entity {
         this.pathfindCooldown = 1500 + Math.random() * 1000;
         // Stagger initial check times so they start searching at different frames
         this.lastPathfindTime = performance.now() - Math.random() * this.pathfindCooldown;
+    }
+    eatFood() {
+        var foodIdx = this.inventory.findIndex(item => item.name === "Apple" || item.name === "Fish" || item.name === "Berry");
+        if (foodIdx !== -1) {
+            this.inventory.splice(foodIdx, 1);
+            this.hunger = Math.max(0, this.hunger - 30);
+            return true;
+        }
+        return false;
     }
     moveTo(startPos, endPos) {
         //@ts-ignore

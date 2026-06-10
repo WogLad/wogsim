@@ -7,6 +7,10 @@ class TestTools {
         const entitySelectGroup = document.getElementById("entitySelectGroup");
         const entityWoodcutter = document.getElementById("entityWoodcutterBtn");
         const entityFisherman = document.getElementById("entityFishermanBtn");
+        const entityMiner = document.getElementById("entityMinerBtn");
+        const entityFarmer = document.getElementById("entityFarmerBtn");
+        const entitySheep = document.getElementById("entitySheepBtn");
+        const entityWolf = document.getElementById("entityWolfBtn");
         const togglePanelBtn = document.getElementById("togglePanelBtn");
         const panel = document.getElementById("testToolsPanel");
         if (togglePanelBtn && panel) {
@@ -42,18 +46,19 @@ class TestTools {
         modeInspect === null || modeInspect === void 0 ? void 0 : modeInspect.addEventListener("click", () => setMode("inspect"));
         modeSpawn === null || modeSpawn === void 0 ? void 0 : modeSpawn.addEventListener("click", () => setMode("spawn"));
         modeDelete === null || modeDelete === void 0 ? void 0 : modeDelete.addEventListener("click", () => setMode("delete"));
-        entityWoodcutter === null || entityWoodcutter === void 0 ? void 0 : entityWoodcutter.addEventListener("click", () => {
-            this.selectedEntity = "woodcutter";
-            entityWoodcutter.classList.add("active");
-            entityFisherman === null || entityFisherman === void 0 ? void 0 : entityFisherman.classList.remove("active");
-            this.setHelpText("Click on a traversable tile to spawn a woodcutter.");
-        });
-        entityFisherman === null || entityFisherman === void 0 ? void 0 : entityFisherman.addEventListener("click", () => {
-            this.selectedEntity = "fisherman";
-            entityFisherman.classList.add("active");
-            entityWoodcutter === null || entityWoodcutter === void 0 ? void 0 : entityWoodcutter.classList.remove("active");
-            this.setHelpText("Click on a traversable tile to spawn a fisherman.");
-        });
+        const entityButtons = [entityWoodcutter, entityFisherman, entityMiner, entityFarmer, entitySheep, entityWolf];
+        const selectEntity = (type, activeBtn) => {
+            this.selectedEntity = type;
+            entityButtons.forEach(btn => btn === null || btn === void 0 ? void 0 : btn.classList.remove("active"));
+            activeBtn === null || activeBtn === void 0 ? void 0 : activeBtn.classList.add("active");
+            this.setHelpText(`Click on a traversable tile to spawn a ${type}.`);
+        };
+        entityWoodcutter === null || entityWoodcutter === void 0 ? void 0 : entityWoodcutter.addEventListener("click", () => selectEntity("woodcutter", entityWoodcutter));
+        entityFisherman === null || entityFisherman === void 0 ? void 0 : entityFisherman.addEventListener("click", () => selectEntity("fisherman", entityFisherman));
+        entityMiner === null || entityMiner === void 0 ? void 0 : entityMiner.addEventListener("click", () => selectEntity("miner", entityMiner));
+        entityFarmer === null || entityFarmer === void 0 ? void 0 : entityFarmer.addEventListener("click", () => selectEntity("farmer", entityFarmer));
+        entitySheep === null || entitySheep === void 0 ? void 0 : entitySheep.addEventListener("click", () => selectEntity("sheep", entitySheep));
+        entityWolf === null || entityWolf === void 0 ? void 0 : entityWolf.addEventListener("click", () => selectEntity("wolf", entityWolf));
         this.updateStats();
     }
     static setHelpText(text) {
@@ -111,7 +116,7 @@ class TestTools {
                 entitiesListEl.innerHTML = "";
                 tileEntities.forEach((ent, index) => {
                     const isSelected = this.inspectedEntity === ent;
-                    const entTypeName = ent instanceof Woodcutter ? "Woodcutter" : (ent instanceof Fisherman ? "Fisherman" : "Human");
+                    const entTypeName = ent instanceof Woodcutter ? "Woodcutter" : (ent instanceof Fisherman ? "Fisherman" : (ent && ent.constructor ? ent.constructor.name : "Entity"));
                     const letter = ent instanceof Human ? ent.professionLetter : "";
                     const itemDiv = document.createElement("div");
                     itemDiv.className = `inspector-entity-item${isSelected ? " selected" : ""}`;
@@ -146,7 +151,7 @@ class TestTools {
             return;
         const globalData = entities.find(d => d.entity === ent);
         const currentPosStr = globalData ? `(${globalData.pos.x}, ${globalData.pos.y})` : "Unknown";
-        const entTypeName = ent instanceof Woodcutter ? "Woodcutter" : (ent instanceof Fisherman ? "Fisherman" : "Human");
+        const entTypeName = ent instanceof Woodcutter ? "Woodcutter" : (ent instanceof Fisherman ? "Fisherman" : (ent && ent.constructor ? ent.constructor.name : "Entity"));
         let inventoryHtml = "None";
         if (ent.inventory.length > 0) {
             inventoryHtml = `
@@ -163,6 +168,18 @@ class TestTools {
                 <div class="detail-row">
                     <span class="detail-label">Type:</span>
                     <span class="detail-val highlight">${entTypeName}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Status:</span>
+                    <span class="detail-val highlight" id="liveInspectorStatus">${ent.stateText}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Health:</span>
+                    <span class="detail-val" id="liveInspectorHealth" style="color: #ff3366; font-weight: bold;">${Math.round(ent.health)}%</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Hunger:</span>
+                    <span class="detail-val" id="liveInspectorHunger" style="color: #ffcc00; font-weight: bold;">${Math.round(ent.hunger)}%</span>
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">ID:</span>
@@ -197,6 +214,15 @@ class TestTools {
         if (!this.inspectedEntity)
             return;
         const ent = this.inspectedEntity;
+        const statusEl = document.getElementById("liveInspectorStatus");
+        if (statusEl)
+            statusEl.innerText = ent.stateText;
+        const healthEl = document.getElementById("liveInspectorHealth");
+        if (healthEl)
+            healthEl.innerText = `${Math.round(ent.health)}%`;
+        const hungerEl = document.getElementById("liveInspectorHunger");
+        if (hungerEl)
+            hungerEl.innerText = `${Math.round(ent.hunger)}%`;
         const ticksEl = document.getElementById("liveInspectorTicks");
         if (ticksEl)
             ticksEl.innerText = ent.ticksAlive.toString();
@@ -258,8 +284,24 @@ class TestTools {
             if (this.selectedEntity === "woodcutter") {
                 newEntity = new Woodcutter();
             }
-            else {
+            else if (this.selectedEntity === "fisherman") {
                 newEntity = new Fisherman();
+            }
+            else if (this.selectedEntity === "miner") {
+                //@ts-ignore
+                newEntity = new Miner();
+            }
+            else if (this.selectedEntity === "farmer") {
+                //@ts-ignore
+                newEntity = new Farmer();
+            }
+            else if (this.selectedEntity === "sheep") {
+                //@ts-ignore
+                newEntity = new Sheep();
+            }
+            else {
+                //@ts-ignore
+                newEntity = new Wolf();
             }
             if (tile.addEntity(newEntity)) {
                 entities.push({ entity: newEntity, pos: Vector2(x, y) });
@@ -315,7 +357,19 @@ class TestTools {
             ctx.fillStyle = isValid ? "#000000" : "#ffffff";
             ctx.font = "bold 10px sans-serif";
             ctx.textAlign = "center";
-            const letter = this.selectedEntity === "woodcutter" ? "W" : "F";
+            let letter = "W";
+            if (this.selectedEntity === "woodcutter")
+                letter = "W";
+            else if (this.selectedEntity === "fisherman")
+                letter = "F";
+            else if (this.selectedEntity === "miner")
+                letter = "M";
+            else if (this.selectedEntity === "farmer")
+                letter = "P";
+            else if (this.selectedEntity === "sheep")
+                letter = "S";
+            else if (this.selectedEntity === "wolf")
+                letter = "X";
             ctx.fillText(letter, screenX + TILE_SIZE / 2, screenY + TILE_SIZE / 1.4);
         }
         else if (this.activeMode === "delete") {
