@@ -201,3 +201,104 @@ img {
 .hidden {
     display: none !important;
 }
+
+/* Inspector card styles */
+.inspector-card {
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.85);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+.sub-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: rgba(255, 255, 255, 0.45);
+    font-weight: bold;
+    margin-top: 4px;
+}
+
+/* List of entities */
+.inspector-entity-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+    margin-top: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.inspector-entity-item:hover {
+    background: rgba(0, 255, 204, 0.1);
+    border-color: rgba(0, 255, 204, 0.3);
+}
+
+.inspector-entity-item.selected {
+    background: rgba(0, 255, 204, 0.2);
+    border-color: #00ffcc;
+    color: #00ffcc;
+    font-weight: bold;
+}
+
+/* Entity details panel */
+.entity-details-panel {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+}
+
+.detail-label {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.detail-val {
+    font-family: Menlo, Monaco, Consolas, monospace;
+    color: #ffffff;
+}
+
+.detail-val.highlight {
+    color: #00ffcc;
+}
+
+.inventory-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 4px;
+}
+
+.inventory-tag {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 3px;
+    padding: 2px 5px;
+    font-size: 10px;
+    color: #e0e0ff;
+}

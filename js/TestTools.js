@@ -68,16 +68,179 @@ class TestTools {
             el.innerText = `Total Entities: ${entities.length}`;
         }
     }
+    static getTileTypeName(type) {
+        switch (type) {
+            case "DARKGREEN": return "Dark Grass";
+            case "#008001": return "Grass";
+            case "#74663B": return "Ground";
+            case "#005EB8": return "Water";
+            case "#003399": return "Dark Water";
+            default: return type;
+        }
+    }
+    static updateInspector() {
+        const tileInfoEl = document.getElementById("devInspectorTileInfo");
+        const entitiesSectionEl = document.getElementById("devInspectorEntitiesSection");
+        const entitiesListEl = document.getElementById("devInspectorEntitiesList");
+        const detailsEl = document.getElementById("devInspectorDetails");
+        if (!this.selectedTile) {
+            if (tileInfoEl)
+                tileInfoEl.innerText = "Click a tile to inspect.";
+            entitiesSectionEl === null || entitiesSectionEl === void 0 ? void 0 : entitiesSectionEl.classList.add("hidden");
+            detailsEl === null || detailsEl === void 0 ? void 0 : detailsEl.classList.add("hidden");
+            return;
+        }
+        // Render Tile Info
+        const typeName = this.getTileTypeName(this.selectedTile.type);
+        if (tileInfoEl) {
+            tileInfoEl.innerHTML = `
+                <div class="detail-row"><span class="detail-label">Terrain:</span><span class="detail-val highlight">${typeName}</span></div>
+                <div class="detail-row"><span class="detail-label">Pos:</span><span class="detail-val">(${this.selectedTile.pos.x}, ${this.selectedTile.pos.y})</span></div>
+                <div class="detail-row"><span class="detail-label">Objects:</span><span class="detail-val">${this.selectedTile.worldObjects.length > 0 ? this.selectedTile.worldObjects.map(o => o.name).join(", ") : "None"}</span></div>
+            `;
+        }
+        // Render Entities List on this Tile
+        const tileEntities = this.selectedTile.entities;
+        if (tileEntities.length > 0) {
+            entitiesSectionEl === null || entitiesSectionEl === void 0 ? void 0 : entitiesSectionEl.classList.remove("hidden");
+            if (entitiesListEl) {
+                entitiesListEl.innerHTML = "";
+                tileEntities.forEach((ent, index) => {
+                    const isSelected = this.inspectedEntity === ent;
+                    const entTypeName = ent instanceof Woodcutter ? "Woodcutter" : (ent instanceof Fisherman ? "Fisherman" : "Human");
+                    const letter = ent instanceof Human ? ent.professionLetter : "";
+                    const itemDiv = document.createElement("div");
+                    itemDiv.className = `inspector-entity-item${isSelected ? " selected" : ""}`;
+                    itemDiv.innerHTML = `
+                        <span>${entTypeName}${letter ? ` (${letter})` : ""}</span>
+                        <span style="font-size: 10px; opacity: 0.6;">ID: ${ent.id.slice(0, 8)}...</span>
+                    `;
+                    itemDiv.addEventListener("click", (e) => {
+                        e.stopPropagation();
+                        this.inspectedEntity = ent;
+                        this.updateInspector();
+                    });
+                    entitiesListEl.appendChild(itemDiv);
+                });
+            }
+        }
+        else {
+            entitiesSectionEl === null || entitiesSectionEl === void 0 ? void 0 : entitiesSectionEl.classList.add("hidden");
+        }
+        // Render Entity Details
+        if (this.inspectedEntity) {
+            detailsEl === null || detailsEl === void 0 ? void 0 : detailsEl.classList.remove("hidden");
+            this.renderEntityDetails(this.inspectedEntity);
+        }
+        else {
+            detailsEl === null || detailsEl === void 0 ? void 0 : detailsEl.classList.add("hidden");
+        }
+    }
+    static renderEntityDetails(ent) {
+        const detailsEl = document.getElementById("devInspectorDetails");
+        if (!detailsEl)
+            return;
+        const globalData = entities.find(d => d.entity === ent);
+        const currentPosStr = globalData ? `(${globalData.pos.x}, ${globalData.pos.y})` : "Unknown";
+        const entTypeName = ent instanceof Woodcutter ? "Woodcutter" : (ent instanceof Fisherman ? "Fisherman" : "Human");
+        let inventoryHtml = "None";
+        if (ent.inventory.length > 0) {
+            inventoryHtml = `
+                <div class="inventory-tags">
+                    ${ent.inventory.map(item => `<span class="inventory-tag">${item.name}</span>`).join("")}
+                </div>
+            `;
+        }
+        const radarVal = ent.radarLength !== undefined ? ent.radarLength : "N/A";
+        const pathfindCooldownVal = Math.round(ent.pathfindCooldown) + "ms";
+        detailsEl.innerHTML = `
+            <div class="entity-details-panel">
+                <div class="sub-label">Entity Details</div>
+                <div class="detail-row">
+                    <span class="detail-label">Type:</span>
+                    <span class="detail-val highlight">${entTypeName}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">ID:</span>
+                    <span class="detail-val" title="${ent.id}">${ent.id.slice(0, 8)}...</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Ticks Alive:</span>
+                    <span class="detail-val" id="liveInspectorTicks">${ent.ticksAlive}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Current Pos:</span>
+                    <span class="detail-val" id="liveInspectorPos">${currentPosStr}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Move Queue:</span>
+                    <span class="detail-val" id="liveInspectorQueue">${ent.moveQueue.length} nodes</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Radar Range:</span>
+                    <span class="detail-val">${radarVal}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Path Cooldown:</span>
+                    <span class="detail-val">${pathfindCooldownVal}</span>
+                </div>
+                <div class="sub-label">Inventory (${ent.inventory.length}/${20})</div>
+                <div id="liveInspectorInventory">${inventoryHtml}</div>
+            </div>
+        `;
+    }
+    static updateInspectorLive() {
+        if (!this.inspectedEntity)
+            return;
+        const ent = this.inspectedEntity;
+        const ticksEl = document.getElementById("liveInspectorTicks");
+        if (ticksEl)
+            ticksEl.innerText = ent.ticksAlive.toString();
+        const posEl = document.getElementById("liveInspectorPos");
+        if (posEl) {
+            const globalData = entities.find(d => d.entity === ent);
+            posEl.innerText = globalData ? `(${globalData.pos.x}, ${globalData.pos.y})` : "Unknown";
+        }
+        const queueEl = document.getElementById("liveInspectorQueue");
+        if (queueEl)
+            queueEl.innerText = `${ent.moveQueue.length} nodes`;
+        const inventoryEl = document.getElementById("liveInspectorInventory");
+        if (inventoryEl) {
+            let inventoryHtml = "None";
+            if (ent.inventory.length > 0) {
+                inventoryHtml = `
+                    <div class="inventory-tags">
+                        ${ent.inventory.map(item => `<span class="inventory-tag">${item.name}</span>`).join("")}
+                    </div>
+                `;
+            }
+            const existingTags = inventoryEl.querySelectorAll(".inventory-tag");
+            if (existingTags.length !== ent.inventory.length) {
+                inventoryEl.innerHTML = inventoryHtml;
+            }
+        }
+    }
     /**
      * Handles canvas clicks. Returns true if the click was handled by TestTools, false otherwise.
      */
     static handleCanvasClick(x, y) {
-        if (this.activeMode === "inspect") {
-            return false; // Default inspect behavior takes over
-        }
         const tile = world[x] ? world[x][y] : undefined;
         if (!tile)
             return true; // Handled but out of bounds
+        if (this.activeMode === "inspect") {
+            this.selectedTile = tile;
+            if (tile.entities.length > 0) {
+                this.inspectedEntity = tile.entities[0];
+            }
+            else {
+                this.inspectedEntity = null;
+            }
+            this.updateInspector();
+            if (tileInspectorDiv) {
+                tileInspectorDiv.innerHTML = tile.getTileInspectorInfoDiv().innerHTML;
+            }
+            return true;
+        }
         if (this.activeMode === "spawn") {
             if (!tile.canBeTraversed()) {
                 alert("Cannot spawn: Tile is not traversable!");
@@ -97,7 +260,10 @@ class TestTools {
             if (tile.addEntity(newEntity)) {
                 entities.push({ entity: newEntity, pos: Vector2(x, y) });
                 this.updateStats();
-                // Update inspector if this tile is currently selected
+                // Inspect the newly spawned entity
+                this.selectedTile = tile;
+                this.inspectedEntity = newEntity;
+                this.updateInspector();
                 if (tileInspectorDiv) {
                     tileInspectorDiv.innerHTML = tile.getTileInspectorInfoDiv().innerHTML;
                 }
@@ -116,7 +282,9 @@ class TestTools {
             }
             tile.entities = [];
             this.updateStats();
-            // Update inspector if this tile is currently selected
+            this.selectedTile = tile;
+            this.inspectedEntity = null;
+            this.updateInspector();
             if (tileInspectorDiv) {
                 tileInspectorDiv.innerHTML = tile.getTileInspectorInfoDiv().innerHTML;
             }
@@ -138,7 +306,6 @@ class TestTools {
             ctx.strokeStyle = isValid ? "#00ffcc" : "#ff3366";
             ctx.lineWidth = 2;
             ctx.strokeRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
-            // Draw text preview of the letter we're about to spawn
             ctx.fillStyle = isValid ? "rgba(0, 255, 204, 0.4)" : "rgba(255, 51, 102, 0.3)";
             ctx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
             ctx.fillStyle = isValid ? "#000000" : "#ffffff";
@@ -165,7 +332,10 @@ class TestTools {
     }
 }
 TestTools.activeMode = "inspect";
-TestTools.selectedEntity = "woodcutter";
+TestTools.selectedEntity = "woodcutter"; // Spawning selection type
+// Inspection state
+TestTools.selectedTile = null;
+TestTools.inspectedEntity = null;
 // Automatically initialize once DOM is loaded
 window.addEventListener("DOMContentLoaded", () => {
     TestTools.init();

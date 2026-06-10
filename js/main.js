@@ -395,6 +395,11 @@ function mainProcess() {
             ticks = 0;
         }
     }
+    //@ts-ignore
+    if (typeof TestTools !== "undefined") {
+        //@ts-ignore
+        TestTools.updateInspectorLive();
+    }
     requestAnimationFrame(mainProcess);
 }
 requestAnimationFrame(mainProcess);
