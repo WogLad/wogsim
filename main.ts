@@ -17,14 +17,8 @@ var CAMERA_OFFSET: Vector2 = Vector2(
     Math.floor(X_TILES / 2) - Math.floor(CANVAS_WIDTH / TILE_SIZE / 2),
     Math.floor(Y_TILES / 2) - Math.floor(CANVAS_HEIGHT / TILE_SIZE / 2)
 );
-var Stockpile: { [key: string]: number } = {
-    wood: 0,
-    fish: 0,
-    stone: 0,
-    wheat: 0,
-    apple: 0,
-    berry: 0
-};
+var activeStockpile: { [key: string]: number } | null = null;
+var activeStockpileName: string = "📦 Select a Town Hall to view Stockpile";
 var STORAGE_POS: Vector2 = Vector2(Math.floor(X_TILES / 2), Math.floor(Y_TILES / 2));
 var PAUSED: boolean = false;
 const TILE_ENTITY_LIMIT: number = 2;
@@ -105,35 +99,14 @@ function init(): void {
         world[x] = [];
         for (var y = 0; y < Y_TILES; y++) {
             var tile: WorldTile = new WorldTile(x, y);
-            if (x === STORAGE_POS.x && y === STORAGE_POS.y) {
-                tile.type = TileType.GROUND;
-                tile.worldObjects = [new WorldObject("storage_pile")];
-                tile.items = [];
-            }
-            else if (tile.type != TileType.WATER && tile.type != TileType.DARK_WATER) {
+            if (tile.type != TileType.WATER && tile.type != TileType.DARK_WATER) {
                 var spawnRoll = Math.random();
-                if (spawnRoll < 0.0015) { // 0.15% chance to spawn a Human
-                    var h: Human;
-                    var humanTypeRoll = Math.random();
-                    if (humanTypeRoll < 0.25) {
-                        h = new Woodcutter();
-                    } else if (humanTypeRoll < 0.5) {
-                        h = new Fisherman();
-                    } else if (humanTypeRoll < 0.75) {
-                        //@ts-ignore
-                        h = new Miner();
-                    } else {
-                        //@ts-ignore
-                        h = new Farmer();
-                    }
-                    tile.addEntity(h);
-                    entities.push({ entity: h, pos: Vector2(x, y) });
-                } else if (spawnRoll < 0.0025) { // 0.10% chance to spawn a Sheep
+                if (spawnRoll < 0.0010) { // 0.10% chance to spawn a Sheep
                     //@ts-ignore
                     var s = new Sheep();
                     tile.addEntity(s);
                     entities.push({ entity: s, pos: Vector2(x, y) });
-                } else if (spawnRoll < 0.0028) { // 0.03% chance to spawn a Wolf
+                } else if (spawnRoll < 0.0013) { // 0.03% chance to spawn a Wolf
                     //@ts-ignore
                     var w = new Wolf();
                     tile.addEntity(w);
@@ -143,6 +116,8 @@ function init(): void {
             world[x][y] = tile;
         }
     }
+
+    generateVillages(5); // Generate 5 village settlements across the map
 
     // Set up the A* Grid
     var gridInput: number[][] = [];
@@ -165,9 +140,156 @@ function init(): void {
     drawEntireWorldToOffscreen();
 }
 
+function generateVillages(count: number): void {
+    let generated = 0;
+    let attempts = 0;
+
+    while (generated < count && attempts < 200) {
+        attempts++;
+        let cx = Math.floor(15 + Math.random() * (X_TILES - 30));
+        let cy = Math.floor(15 + Math.random() * (Y_TILES - 30));
+
+        let centerTile = world[cx][cy];
+        if (centerTile.type === TileType.WATER || centerTile.type === TileType.DARK_WATER || centerTile.type === TileType.SAND || centerTile.type === TileType.SNOW) {
+            continue;
+        }
+
+        let tooClose = false;
+        for (var x = cx - 25; x <= cx + 25; x++) {
+            for (var y = cy - 25; y <= cy + 25; y++) {
+                if (world[x] && world[x][y]) {
+                    if (world[x][y].worldObjects.some(o => o.name === "town_hall" || o.name === "storage_pile")) {
+                        tooClose = true;
+                        break;
+                    }
+                }
+            }
+            if (tooClose) break;
+        }
+        if (tooClose) continue;
+
+        centerTile.type = TileType.GROUND;
+        centerTile.worldObjects = [new WorldObject("town_hall")];
+        centerTile.items = [];
+
+        let campfireTile = world[cx + 3] ? world[cx + 3][cy] : null;
+        if (campfireTile) {
+            campfireTile.type = TileType.GROUND;
+            campfireTile.worldObjects = [new WorldObject("campfire")];
+            campfireTile.items = [];
+        }
+
+        let houseOffsets = [
+            { x: -3, y: -3 },
+            { x: -3, y: 3 },
+            { x: 3, y: -3 }
+        ];
+        for (var offset of houseOffsets) {
+            let hx = cx + offset.x;
+            let hy = cy + offset.y;
+            if (world[hx] && world[hx][hy]) {
+                let tile = world[hx][hy];
+                tile.type = TileType.GROUND;
+                tile.worldObjects = [new WorldObject("house")];
+                tile.items = [];
+            }
+        }
+
+        for (let r = -4; r <= 4; r++) {
+            let tx = cx + r;
+            let ty = cy;
+            if (world[tx] && world[tx][ty] && world[tx][ty].type !== TileType.WATER && world[tx][ty].type !== TileType.DARK_WATER) {
+                world[tx][ty].type = TileType.GROUND;
+                world[tx][ty].worldObjects = world[tx][ty].worldObjects.filter(o => o.name === "town_hall" || o.name === "campfire" || o.name === "house");
+            }
+            tx = cx;
+            ty = cy + r;
+            if (world[tx] && world[tx][ty] && world[tx][ty].type !== TileType.WATER && world[tx][ty].type !== TileType.DARK_WATER) {
+                world[tx][ty].type = TileType.GROUND;
+                world[tx][ty].worldObjects = world[tx][ty].worldObjects.filter(o => o.name === "town_hall" || o.name === "campfire" || o.name === "house");
+            }
+        }
+
+        let px = cx + 2;
+        let py = cy + 2;
+        for (let fx = px; fx <= px + 4; fx++) {
+            for (let fy = py; fy <= py + 4; fy++) {
+                if (world[fx] && world[fx][fy]) {
+                    if (fx === px || fx === px + 4 || fy === py || fy === py + 4) {
+                        if (!(fx === cx && fy === cy)) {
+                            world[fx][fy].worldObjects = [new WorldObject("fence")];
+                            world[fx][fy].items = [];
+                        }
+                    }
+                }
+            }
+        }
+
+        let penInnerPos = [
+            { x: px + 1, y: py + 1 },
+            { x: px + 2, y: py + 1 },
+            { x: px + 1, y: py + 2 },
+            { x: px + 2, y: py + 2 }
+        ];
+        for (let i = 0; i < penInnerPos.length; i++) {
+            let pos = penInnerPos[i];
+            if (world[pos.x] && world[pos.x][pos.y]) {
+                let tile = world[pos.x][pos.y];
+                tile.entities = [];
+                tile.worldObjects = [];
+
+                let animal: Entity;
+                if (i < 2) {
+                    //@ts-ignore
+                    animal = new Sheep();
+                } else {
+                    //@ts-ignore
+                    animal = new Cow();
+                }
+                tile.addEntity(animal);
+                entities.push({ entity: animal, pos: Vector2(pos.x, pos.y) });
+            }
+        }
+
+        let villagerSpawnOffsets = [
+            { x: -1, y: -1 },
+            { x: 1, y: -1 },
+            { x: -1, y: 1 },
+            { x: 1, y: 1 }
+        ];
+        for (let i = 0; i < villagerSpawnOffsets.length; i++) {
+            let offset = villagerSpawnOffsets[i];
+            let vx = cx + offset.x;
+            let vy = cy + offset.y;
+            if (world[vx] && world[vx][vy]) {
+                let tile = world[vx][vy];
+                tile.entities = [];
+                tile.worldObjects = [];
+
+                let villager: Human;
+                if (i === 0) {
+                    villager = new Woodcutter();
+                } else if (i === 1) {
+                    villager = new Fisherman();
+                } else if (i === 2) {
+                    //@ts-ignore
+                    villager = new Miner();
+                } else {
+                    //@ts-ignore
+                    villager = new Farmer();
+                }
+                tile.addEntity(villager);
+                entities.push({ entity: villager, pos: Vector2(vx, vy) });
+            }
+        }
+
+        generated++;
+    }
+}
+
 function drawProceduralObject(ctx: CanvasRenderingContext2D, name: string, x: number, y: number, size: number): void {
     ctx.save();
-    
+
     // Center calculations
     var cx = x + size / 2;
     var cy = y + size / 2;
@@ -185,10 +307,10 @@ function drawProceduralObject(ctx: CanvasRenderingContext2D, name: string, x: nu
         // Draw a nice chest/crate or pile of items
         ctx.fillStyle = "#8b5a2b"; // Brown box
         ctx.fillRect(x + size * 0.15, y + size * 0.25, size * 0.7, size * 0.65);
-        
+
         ctx.fillStyle = "#cd853f"; // Lid highlight
         ctx.fillRect(x + size * 0.15, y + size * 0.25, size * 0.7, size * 0.18);
-        
+
         ctx.fillStyle = "#ffd700"; // Gold latch
         ctx.fillRect(cx - size * 0.08, y + size * 0.4, size * 0.16, size * 0.15);
     }
@@ -196,7 +318,7 @@ function drawProceduralObject(ctx: CanvasRenderingContext2D, name: string, x: nu
         // Pine tree: brown trunk + stacked green triangles
         ctx.fillStyle = "#4a3328"; // Trunk
         ctx.fillRect(cx - size * 0.08, y + size * 0.7, size * 0.16, size * 0.3);
-        
+
         ctx.fillStyle = "#1e3f20"; // Dark pine green
         // Bottom triangle
         ctx.beginPath();
@@ -227,7 +349,7 @@ function drawProceduralObject(ctx: CanvasRenderingContext2D, name: string, x: nu
         ctx.fillStyle = "#2e8b57"; // Sea green
         var lx = cx - size * 0.1;
         var ly = y + size * 0.3;
-        
+
         var fronds = [
             { tx: lx - size * 0.35, ty: ly + size * 0.1 },
             { tx: lx - size * 0.4, ty: ly - size * 0.15 },
@@ -250,11 +372,11 @@ function drawProceduralObject(ctx: CanvasRenderingContext2D, name: string, x: nu
         ctx.fillStyle = "#2d7a47";
         // Main stem
         ctx.fillRect(cx - size * 0.12, y + size * 0.2, size * 0.24, size * 0.8);
-        
+
         // Left arm
         ctx.fillRect(x + size * 0.15, y + size * 0.45, size * 0.2, size * 0.12);
         ctx.fillRect(x + size * 0.15, y + size * 0.25, size * 0.12, size * 0.2);
-        
+
         // Right arm
         ctx.fillRect(cx, y + size * 0.35, size * 0.25, size * 0.12);
         ctx.fillRect(x + size * 0.7, y + size * 0.15, size * 0.12, size * 0.2);
@@ -277,7 +399,7 @@ function drawProceduralObject(ctx: CanvasRenderingContext2D, name: string, x: nu
             ctx.moveTo(cx + s, y + size);
             ctx.quadraticCurveTo(cx + s * 1.5, y + size * 0.5, cx + s * 0.8, y + size * 0.2);
             ctx.stroke();
-            
+
             ctx.fillStyle = "#ffd700";
             ctx.beginPath();
             ctx.arc(cx + s * 0.8, y + size * 0.2, 2, 0, Math.PI * 2);
@@ -315,11 +437,103 @@ function drawProceduralObject(ctx: CanvasRenderingContext2D, name: string, x: nu
         ctx.beginPath();
         ctx.arc(cx - size * 0.15, y + size * 0.7, size * 0.2, 0, Math.PI * 2);
         ctx.fill();
-        
+
         ctx.fillStyle = "#a9a9a9";
         ctx.beginPath();
         ctx.arc(cx + size * 0.1, y + size * 0.65, size * 0.25, 0, Math.PI * 2);
         ctx.fill();
+    }
+    else if (name === "town_hall") {
+        // Red brick wall structure
+        ctx.fillStyle = "#8b2635"; // Brick red/maroon
+        ctx.fillRect(x + size * 0.1, y + size * 0.35, size * 0.8, size * 0.55);
+        // Roof
+        ctx.fillStyle = "#3b4a5a"; // Slate grey
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.05, y + size * 0.35);
+        ctx.lineTo(x + size * 0.95, y + size * 0.35);
+        ctx.lineTo(cx, y + size * 0.05);
+        ctx.closePath();
+        ctx.fill();
+        // Door
+        ctx.fillStyle = "#3e2723"; // Dark wood
+        ctx.fillRect(cx - size * 0.15, y + size * 0.6, size * 0.3, size * 0.3);
+        // Gold lock latch
+        ctx.fillStyle = "#ffd700";
+        ctx.fillRect(cx - size * 0.03, y + size * 0.72, size * 0.06, size * 0.08);
+        // Windows
+        ctx.fillStyle = "#e0f7fa"; // Light cyan window
+        ctx.fillRect(x + size * 0.22, y + size * 0.45, size * 0.14, size * 0.14);
+        ctx.fillRect(x + size * 0.64, y + size * 0.45, size * 0.14, size * 0.14);
+    }
+    else if (name === "house") {
+        // Cottage house
+        ctx.fillStyle = "#cd853f"; // Wood siding
+        ctx.fillRect(x + size * 0.15, y + size * 0.42, size * 0.7, size * 0.48);
+        // Red triangular roof
+        ctx.fillStyle = "#b22222";
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.1, y + size * 0.42);
+        ctx.lineTo(x + size * 0.9, y + size * 0.42);
+        ctx.lineTo(cx, y + size * 0.15);
+        ctx.closePath();
+        ctx.fill();
+        // Door
+        ctx.fillStyle = "#4e342e";
+        ctx.fillRect(cx - size * 0.1, y + size * 0.62, size * 0.2, size * 0.28);
+        // Small square window
+        ctx.fillStyle = "#ffeb3b";
+        ctx.fillRect(x + size * 0.24, y + size * 0.5, size * 0.12, size * 0.12);
+    }
+    else if (name === "campfire") {
+        // Campfire: ring of stones
+        ctx.fillStyle = "#757575";
+        for (var angle = 0; angle < Math.PI * 2; angle += Math.PI / 4) {
+            var sx = cx + Math.cos(angle) * size * 0.3;
+            var sy = cy + Math.sin(angle) * size * 0.3;
+            ctx.beginPath();
+            ctx.arc(sx, sy, size * 0.08, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        // Crossed logs
+        ctx.strokeStyle = "#5d4037";
+        ctx.lineWidth = size * 0.08;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(cx - size * 0.2, cy + size * 0.1);
+        ctx.lineTo(cx + size * 0.2, cy - size * 0.1);
+        ctx.moveTo(cx + size * 0.2, cy + size * 0.1);
+        ctx.lineTo(cx - size * 0.2, cy - size * 0.1);
+        ctx.stroke();
+        // Red/orange fire flame in center
+        ctx.fillStyle = "#ff3d00"; // Deep orange
+        ctx.beginPath();
+        ctx.arc(cx, cy - size * 0.05, size * 0.15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#ffeb3b"; // Bright yellow
+        ctx.beginPath();
+        ctx.arc(cx, cy - size * 0.07, size * 0.08, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    else if (name === "fence") {
+        // Horizontal rails & vertical posts
+        ctx.strokeStyle = "#8d6e63"; // Medium brown
+        ctx.lineWidth = size * 0.09;
+        ctx.lineCap = "square";
+
+        ctx.beginPath();
+        // Vertical Posts
+        ctx.moveTo(x + size * 0.2, y);
+        ctx.lineTo(x + size * 0.2, y + size);
+        ctx.moveTo(x + size * 0.8, y);
+        ctx.lineTo(x + size * 0.8, y + size);
+
+        // Horizontal Rails
+        ctx.moveTo(x, y + size * 0.3);
+        ctx.lineTo(x + size, y + size * 0.3);
+        ctx.moveTo(x, y + size * 0.7);
+        ctx.lineTo(x + size, y + size * 0.7);
+        ctx.stroke();
     }
 
     ctx.restore();
@@ -401,14 +615,28 @@ function clearDrawBuffers(): void {
 
 var stockpileElements: { [key: string]: HTMLElement | null } = {};
 function updateStockpileUI() {
+    const groupEl = document.getElementById("stockpileGroup");
+    if (groupEl) {
+        if (activeStockpile) {
+            groupEl.classList.remove("hidden");
+        } else {
+            groupEl.classList.add("hidden");
+            return;
+        }
+    }
+
     const resources = ["wood", "fish", "stone", "wheat", "apple", "berry"];
+    const labelEl = document.querySelector("#stockpileGroup label") as HTMLElement;
+    if (labelEl && labelEl.innerText !== activeStockpileName) {
+        labelEl.innerText = activeStockpileName;
+    }
     for (const res of resources) {
         if (!stockpileElements[res]) {
             stockpileElements[res] = document.getElementById("stockpile" + res.charAt(0).toUpperCase() + res.slice(1));
         }
         const el = stockpileElements[res];
         if (el) {
-            el.innerText = Stockpile[res].toString();
+            el.innerText = (activeStockpile && activeStockpile[res] !== undefined ? activeStockpile[res] : 0).toString();
         }
     }
 }
@@ -658,6 +886,8 @@ function mainProcess(): void {
                     ctx.fillStyle = "#e5ff82"; // Soft yellow-green
                 } else if (e.constructor.name === "Sheep") {
                     ctx.fillStyle = "#ffffff"; // Soft white
+                } else if (e.constructor.name === "Cow") {
+                    ctx.fillStyle = "#f5f5f5"; // Off-white
                 } else if (e.constructor.name === "Wolf") {
                     ctx.fillStyle = "#666666"; // Dark grey
                 } else {
@@ -668,6 +898,16 @@ function mainProcess(): void {
                 ctx.lineWidth = 1;
                 ctx.stroke();
 
+                // Draw black cow spots procedurally
+                if (e.constructor.name === "Cow") {
+                    ctx.fillStyle = "#333333";
+                    ctx.beginPath();
+                    ctx.arc(cx - TILE_SIZE * 0.18, cy - TILE_SIZE * 0.15, TILE_SIZE * 0.12, 0, Math.PI * 2);
+                    ctx.arc(cx + TILE_SIZE * 0.2, cy + TILE_SIZE * 0.12, TILE_SIZE * 0.14, 0, Math.PI * 2);
+                    ctx.arc(cx - TILE_SIZE * 0.05, cy + TILE_SIZE * 0.2, TILE_SIZE * 0.1, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
                 // Build entity text display
                 var letter = "?";
                 var textCol = "black";
@@ -675,6 +915,9 @@ function mainProcess(): void {
                     letter = e.professionLetter;
                 } else if (e.constructor.name === "Sheep") {
                     letter = "S";
+                } else if (e.constructor.name === "Cow") {
+                    letter = "C";
+                    textCol = "#111111";
                 } else if (e.constructor.name === "Wolf") {
                     letter = "X";
                     textCol = "#ff2222"; // Red X for wolf

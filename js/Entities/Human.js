@@ -35,21 +35,27 @@ class Human extends Entity {
                 var isFull = this.getTotalItemCount() >= INVENTORY_MAX_CAPACITY;
                 if (hasResources && (isFull || this.stateText === "Returning to Storage")) {
                     this.stateText = "Returning to Storage";
-                    // Check if adjacent to storage pos (Chebyshev distance <= 1)
+                    // Locate the nearest town hall or storage pile in a 40-tile radius
+                    var nearestStoragePos = this.findNearest(currentX, currentY, 40, (tile) => {
+                        return tile.worldObjects.some(o => o.name === "town_hall" || o.name === "storage_pile");
+                    });
                     //@ts-ignore
-                    if (Math.abs(currentX - STORAGE_POS.x) <= 1 && Math.abs(currentY - STORAGE_POS.y) <= 1) {
+                    var targetPos = nearestStoragePos || STORAGE_POS;
+                    // Check if adjacent to target storage pos (Chebyshev distance <= 1)
+                    if (Math.abs(currentX - targetPos.x) <= 1 && Math.abs(currentY - targetPos.y) <= 1) {
                         this.stateText = "Depositing Resources";
+                        var targetTile = world[targetPos.x] ? world[targetPos.x][targetPos.y] : null;
+                        var storageObj = targetTile ? targetTile.worldObjects.find(o => o.name === "town_hall" || o.name === "storage_pile") : null;
                         for (var entry of this.inventory) {
                             if (!(entry.item instanceof Tool)) {
                                 var nameLower = entry.item.name.toLowerCase();
-                                //@ts-ignore
-                                if (nameLower in Stockpile) {
-                                    //@ts-ignore
-                                    Stockpile[nameLower] += entry.count;
-                                }
-                                else {
-                                    //@ts-ignore
-                                    Stockpile.wood += entry.count;
+                                if (storageObj && storageObj.stockpile) {
+                                    if (nameLower in storageObj.stockpile) {
+                                        storageObj.stockpile[nameLower] += entry.count;
+                                    }
+                                    else {
+                                        storageObj.stockpile.wood += entry.count;
+                                    }
                                 }
                             }
                         }
@@ -62,7 +68,7 @@ class Human extends Entity {
                         if (now - this.lastPathfindTime >= this.pathfindCooldown) {
                             this.lastPathfindTime = now;
                             //@ts-ignore
-                            this.moveTo(Vector2(currentX, currentY), STORAGE_POS);
+                            this.moveTo(Vector2(currentX, currentY), targetPos);
                         }
                     }
                 }

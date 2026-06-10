@@ -1,6 +1,6 @@
 class TestTools {
     static activeMode: "inspect" | "spawn" | "delete" = "inspect";
-    static selectedEntity: "woodcutter" | "fisherman" | "miner" | "farmer" | "sheep" | "wolf" = "woodcutter"; // Spawning selection type
+    static selectedEntity: "woodcutter" | "fisherman" | "miner" | "farmer" | "sheep" | "cow" | "wolf" = "woodcutter"; // Spawning selection type
 
     // Inspection state
     static selectedTile: WorldTile | null = null;
@@ -17,6 +17,7 @@ class TestTools {
         const entityMiner = document.getElementById("entityMinerBtn");
         const entityFarmer = document.getElementById("entityFarmerBtn");
         const entitySheep = document.getElementById("entitySheepBtn");
+        const entityCow = document.getElementById("entityCowBtn");
         const entityWolf = document.getElementById("entityWolfBtn");
 
         const togglePanelBtn = document.getElementById("togglePanelBtn");
@@ -55,9 +56,9 @@ class TestTools {
         modeSpawn?.addEventListener("click", () => setMode("spawn"));
         modeDelete?.addEventListener("click", () => setMode("delete"));
 
-        const entityButtons = [entityWoodcutter, entityFisherman, entityMiner, entityFarmer, entitySheep, entityWolf];
+        const entityButtons = [entityWoodcutter, entityFisherman, entityMiner, entityFarmer, entitySheep, entityCow, entityWolf];
         
-        const selectEntity = (type: "woodcutter" | "fisherman" | "miner" | "farmer" | "sheep" | "wolf", activeBtn: HTMLElement | null) => {
+        const selectEntity = (type: "woodcutter" | "fisherman" | "miner" | "farmer" | "sheep" | "cow" | "wolf", activeBtn: HTMLElement | null) => {
             this.selectedEntity = type;
             entityButtons.forEach(btn => btn?.classList.remove("active"));
             activeBtn?.classList.add("active");
@@ -69,6 +70,7 @@ class TestTools {
         entityMiner?.addEventListener("click", () => selectEntity("miner", entityMiner));
         entityFarmer?.addEventListener("click", () => selectEntity("farmer", entityFarmer));
         entitySheep?.addEventListener("click", () => selectEntity("sheep", entitySheep));
+        entityCow?.addEventListener("click", () => selectEntity("cow", entityCow));
         entityWolf?.addEventListener("click", () => selectEntity("wolf", entityWolf));
 
         this.updateStats();
@@ -307,6 +309,19 @@ class TestTools {
             }
             this.updateInspector();
 
+            var townHall = tile.worldObjects.find(o => o.name === "town_hall" || o.name === "storage_pile");
+            if (townHall && townHall.stockpile) {
+                //@ts-ignore
+                activeStockpile = townHall.stockpile;
+                //@ts-ignore
+                activeStockpileName = `📦 Village Stockpile (${tile.pos.x}, ${tile.pos.y})`;
+            } else {
+                //@ts-ignore
+                activeStockpile = null;
+                //@ts-ignore
+                activeStockpileName = "📦 Select a Town Hall to view Stockpile";
+            }
+
             if (tileInspectorDiv) {
                 tileInspectorDiv.innerHTML = tile.getTileInspectorInfoDiv().innerHTML;
             }
@@ -337,6 +352,9 @@ class TestTools {
             } else if (this.selectedEntity === "sheep") {
                 //@ts-ignore
                 newEntity = new Sheep();
+            } else if (this.selectedEntity === "cow") {
+                //@ts-ignore
+                newEntity = new Cow();
             } else {
                 //@ts-ignore
                 newEntity = new Wolf();
@@ -412,6 +430,7 @@ class TestTools {
             else if (this.selectedEntity === "miner") letter = "M";
             else if (this.selectedEntity === "farmer") letter = "P";
             else if (this.selectedEntity === "sheep") letter = "S";
+            else if (this.selectedEntity === "cow") letter = "C";
             else if (this.selectedEntity === "wolf") letter = "X";
             ctx.fillText(letter, screenX + TILE_SIZE / 2, screenY + TILE_SIZE / 1.4);
         } else if (this.activeMode === "delete") {

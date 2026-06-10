@@ -186,6 +186,9 @@ class WorldTile {
         if ([TileType.WATER, TileType.DARK_WATER].includes(this.type)) {
             return false;
         }
+        if (this.worldObjects.some(o => o.name === "fence")) {
+            return false;
+        }
         return true;
     }
 }

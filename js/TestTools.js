@@ -10,6 +10,7 @@ class TestTools {
         const entityMiner = document.getElementById("entityMinerBtn");
         const entityFarmer = document.getElementById("entityFarmerBtn");
         const entitySheep = document.getElementById("entitySheepBtn");
+        const entityCow = document.getElementById("entityCowBtn");
         const entityWolf = document.getElementById("entityWolfBtn");
         const togglePanelBtn = document.getElementById("togglePanelBtn");
         const panel = document.getElementById("testToolsPanel");
@@ -46,7 +47,7 @@ class TestTools {
         modeInspect === null || modeInspect === void 0 ? void 0 : modeInspect.addEventListener("click", () => setMode("inspect"));
         modeSpawn === null || modeSpawn === void 0 ? void 0 : modeSpawn.addEventListener("click", () => setMode("spawn"));
         modeDelete === null || modeDelete === void 0 ? void 0 : modeDelete.addEventListener("click", () => setMode("delete"));
-        const entityButtons = [entityWoodcutter, entityFisherman, entityMiner, entityFarmer, entitySheep, entityWolf];
+        const entityButtons = [entityWoodcutter, entityFisherman, entityMiner, entityFarmer, entitySheep, entityCow, entityWolf];
         const selectEntity = (type, activeBtn) => {
             this.selectedEntity = type;
             entityButtons.forEach(btn => btn === null || btn === void 0 ? void 0 : btn.classList.remove("active"));
@@ -58,6 +59,7 @@ class TestTools {
         entityMiner === null || entityMiner === void 0 ? void 0 : entityMiner.addEventListener("click", () => selectEntity("miner", entityMiner));
         entityFarmer === null || entityFarmer === void 0 ? void 0 : entityFarmer.addEventListener("click", () => selectEntity("farmer", entityFarmer));
         entitySheep === null || entitySheep === void 0 ? void 0 : entitySheep.addEventListener("click", () => selectEntity("sheep", entitySheep));
+        entityCow === null || entityCow === void 0 ? void 0 : entityCow.addEventListener("click", () => selectEntity("cow", entityCow));
         entityWolf === null || entityWolf === void 0 ? void 0 : entityWolf.addEventListener("click", () => selectEntity("wolf", entityWolf));
         this.updateStats();
     }
@@ -283,6 +285,19 @@ class TestTools {
                 this.inspectedEntity = null;
             }
             this.updateInspector();
+            var townHall = tile.worldObjects.find(o => o.name === "town_hall" || o.name === "storage_pile");
+            if (townHall && townHall.stockpile) {
+                //@ts-ignore
+                activeStockpile = townHall.stockpile;
+                //@ts-ignore
+                activeStockpileName = `📦 Village Stockpile (${tile.pos.x}, ${tile.pos.y})`;
+            }
+            else {
+                //@ts-ignore
+                activeStockpile = null;
+                //@ts-ignore
+                activeStockpileName = "📦 Select a Town Hall to view Stockpile";
+            }
             if (tileInspectorDiv) {
                 tileInspectorDiv.innerHTML = tile.getTileInspectorInfoDiv().innerHTML;
             }
@@ -315,6 +330,10 @@ class TestTools {
             else if (this.selectedEntity === "sheep") {
                 //@ts-ignore
                 newEntity = new Sheep();
+            }
+            else if (this.selectedEntity === "cow") {
+                //@ts-ignore
+                newEntity = new Cow();
             }
             else {
                 //@ts-ignore
@@ -385,6 +404,8 @@ class TestTools {
                 letter = "P";
             else if (this.selectedEntity === "sheep")
                 letter = "S";
+            else if (this.selectedEntity === "cow")
+                letter = "C";
             else if (this.selectedEntity === "wolf")
                 letter = "X";
             ctx.fillText(letter, screenX + TILE_SIZE / 2, screenY + TILE_SIZE / 1.4);

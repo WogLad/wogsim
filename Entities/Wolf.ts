@@ -30,9 +30,9 @@ class Wolf extends Entity {
             return deviation;
         }
 
-        // 1. Scan for nearest Sheep in radar range
-        var nearestSheepPos: Vector2 | null = null;
-        var nearestSheepEntity: Entity | null = null;
+        // 1. Scan for nearest Sheep or Cow in radar range
+        var nearestPreyPos: Vector2 | null = null;
+        var nearestPreyEntity: Entity | null = null;
         var minDistance = Infinity;
 
         for (var dx = -this.radarLength; dx <= this.radarLength; dx++) {
@@ -42,12 +42,12 @@ class Wolf extends Entity {
                 if (world[tx] && world[tx][ty]) {
                     var tile = world[tx][ty];
                     for (var ent of tile.entities) {
-                        if (ent && ent.constructor && ent.constructor.name === "Sheep") {
+                        if (ent && ent.constructor && (ent.constructor.name === "Sheep" || ent.constructor.name === "Cow")) {
                             var dist = Math.max(Math.abs(dx), Math.abs(dy));
                             if (dist < minDistance) {
                                 minDistance = dist;
-                                nearestSheepPos = Vector2(tx, ty);
-                                nearestSheepEntity = ent;
+                                nearestPreyPos = Vector2(tx, ty);
+                                nearestPreyEntity = ent;
                             }
                         }
                     }
@@ -55,19 +55,20 @@ class Wolf extends Entity {
             }
         }
 
-        // 2. If sheep found, hunt it
-        if (nearestSheepPos && nearestSheepEntity) {
+        // 2. If prey found, hunt it
+        if (nearestPreyPos && nearestPreyEntity) {
+            var preyType = nearestPreyEntity.constructor.name;
             if (minDistance <= 1) {
-                // Adjacent! Eat the sheep
-                this.stateText = "Eating Sheep";
-                var sheepTile = world[nearestSheepPos.x][nearestSheepPos.y];
-                var indexOnTile = sheepTile.entities.indexOf(nearestSheepEntity);
+                // Adjacent! Eat the prey
+                this.stateText = "Eating " + preyType;
+                var preyTile = world[nearestPreyPos.x][nearestPreyPos.y];
+                var indexOnTile = preyTile.entities.indexOf(nearestPreyEntity);
                 if (indexOnTile !== -1) {
-                    sheepTile.removeEntity(indexOnTile);
+                    preyTile.removeEntity(indexOnTile);
                 }
                 
                 //@ts-ignore
-                var indexInGlobal = entities.findIndex(d => d.entity === nearestSheepEntity);
+                var indexInGlobal = entities.findIndex(d => d.entity === nearestPreyEntity);
                 if (indexInGlobal !== -1) {
                     //@ts-ignore
                     entities.splice(indexInGlobal, 1);
@@ -77,11 +78,11 @@ class Wolf extends Entity {
                 return Vector2(0, 0); // Remain on tile to finish eating
             } else {
                 // Chase
-                this.stateText = "Hunting Sheep";
+                this.stateText = "Hunting " + preyType;
                 var now = performance.now();
                 if (now - this.lastPathfindTime >= this.pathfindCooldown) {
                     this.lastPathfindTime = now;
-                    this.moveTo(Vector2(currentX, currentY), nearestSheepPos);
+                    this.moveTo(Vector2(currentX, currentY), nearestPreyPos);
                 }
             }
         } else {
