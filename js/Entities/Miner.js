@@ -1,7 +1,7 @@
 "use strict";
 class Miner extends Human {
-    constructor() {
-        super("M");
+    constructor(customGenome) {
+        super("M", customGenome);
         /** The radius of the search square that is used to find the human's next position */
         this.radarLength = 10;
         this.addToInventory(new Tool("Stone Pickaxe"));

@@ -25,6 +25,7 @@ const INVENTORY_MAX_CAPACITY = 20;
 // Village settings and spawn configuration
 var townHallPositions = [];
 var HUMAN_SPAWN_INTERVAL = 100; // Tweak this value to change runtime spawn rate (lower = faster spawn)
+var MAX_ENTITIES_LIMIT = 150; // Maximum number of concurrent entities in the world to maintain high performance
 canvas.height = CANVAS_HEIGHT;
 canvas.width = CANVAS_WIDTH;
 window.addEventListener("resize", () => {
@@ -614,7 +615,11 @@ function mainProcess() {
             var e = ent.entity;
             var pos = ent.pos;
             // Handle death
-            if (e.health <= 0) {
+            if (e.health <= 0 || (e.isLiving && e.ticksAlive >= e.maxAge)) {
+                if (e.isLiving && e.ticksAlive >= e.maxAge) {
+                    e.health = 0;
+                    e.stateText = "Dead (Old Age)";
+                }
                 var oldTile = world[pos.x][pos.y];
                 oldTile.removeEntity(oldTile.entities.indexOf(e));
                 entities.splice(i, 1);
@@ -634,8 +639,9 @@ function mainProcess() {
                 continue;
             }
             e.process();
-            // Movement handler (Staggered to distribute heavy pathfinding load across MOVEMENT_DELAY frames)
-            if (e.move != null && (ticks + i) % MOVEMENT_DELAY == 0) {
+            // Movement handler (Staggered to distribute heavy pathfinding load across speedGene-based frames)
+            var moveDelay = Math.round(15 * (e.genome ? e.genome.speedGene : 1.0));
+            if (e.move != null && (ticks + i) % moveDelay == 0) {
                 var direction = e.move(pos.x, pos.y);
                 if (direction.x != 0 || direction.y != 0) {
                     var targetX = pos.x + direction.x;
@@ -905,42 +911,63 @@ function mainProcess() {
         if (ticks == 1000000000) {
             ticks = 0;
         }
-        // Runtime Spawning of Humans at Town Halls
-        if (ticks % HUMAN_SPAWN_INTERVAL === 0) {
+        // Rescue Spawner to prevent total extinction (runs every 300 ticks)
+        if (ticks % 300 === 0) {
+            // 1. Human Village Extinction Rescue
             for (let thPos of townHallPositions) {
-                let spawned = false;
-                for (let dx = -2; dx <= 2 && !spawned; dx++) {
-                    for (let dy = -2; dy <= 2 && !spawned; dy++) {
-                        if (dx === 0 && dy === 0)
-                            continue;
-                        let vx = thPos.x + dx;
-                        let vy = thPos.y + dy;
-                        if (world[vx] && world[vx][vy]) {
-                            let tile = world[vx][vy];
-                            if (tile.canBeTraversed() && tile.entities.length < TILE_ENTITY_LIMIT && tile.worldObjects.length === 0) {
-                                let roll = Math.floor(Math.random() * 4);
-                                let villager;
-                                if (roll === 0) {
-                                    villager = new Woodcutter();
-                                }
-                                else if (roll === 1) {
-                                    villager = new Fisherman();
-                                }
-                                else if (roll === 2) {
+                let villageHumans = entities.filter(d => d.entity instanceof Human &&
+                    Math.max(Math.abs(d.pos.x - thPos.x), Math.abs(d.pos.y - thPos.y)) <= 45);
+                if (villageHumans.length < 2 && entities.length < MAX_ENTITIES_LIMIT) {
+                    let spawned = false;
+                    for (let dx = -2; dx <= 2 && !spawned; dx++) {
+                        for (let dy = -2; dy <= 2 && !spawned; dy++) {
+                            if (dx === 0 && dy === 0)
+                                continue;
+                            let vx = thPos.x + dx;
+                            let vy = thPos.y + dy;
+                            if (world[vx] && world[vx][vy]) {
+                                let tile = world[vx][vy];
+                                if (tile.canBeTraversed() && tile.entities.length < TILE_ENTITY_LIMIT && tile.worldObjects.length === 0) {
+                                    let roll = Math.floor(Math.random() * 4);
+                                    let villager;
+                                    if (roll === 0)
+                                        villager = new Woodcutter();
+                                    else if (roll === 1)
+                                        villager = new Fisherman();
+                                    else if (roll === 2) {
+                                        //@ts-ignore
+                                        villager = new Miner();
+                                    }
+                                    else {
+                                        //@ts-ignore
+                                        villager = new Farmer();
+                                    }
+                                    tile.addEntity(villager);
+                                    entities.push({ entity: villager, pos: Vector2(vx, vy) });
+                                    spawned = true;
                                     //@ts-ignore
-                                    villager = new Miner();
+                                    if (typeof TestTools !== "undefined") {
+                                        //@ts-ignore
+                                        TestTools.updateStats();
+                                    }
                                 }
-                                else {
-                                    //@ts-ignore
-                                    villager = new Farmer();
-                                }
-                                tile.addEntity(villager);
-                                entities.push({ entity: villager, pos: Vector2(vx, vy) });
-                                spawned = true;
                             }
                         }
                     }
                 }
+            }
+            // 2. Wild Animals Extinction Rescue
+            let sheepCount = entities.filter(d => d.entity.constructor.name === "Sheep").length;
+            let cowCount = entities.filter(d => d.entity.constructor.name === "Cow").length;
+            let wolfCount = entities.filter(d => d.entity.constructor.name === "Wolf").length;
+            if (sheepCount < 4 && entities.length < MAX_ENTITIES_LIMIT) {
+                spawnWildAnimal("Sheep");
+            }
+            if (cowCount < 4 && entities.length < MAX_ENTITIES_LIMIT) {
+                spawnWildAnimal("Cow");
+            }
+            if (wolfCount < 2 && entities.length < MAX_ENTITIES_LIMIT) {
+                spawnWildAnimal("Wolf");
             }
         }
     }
@@ -952,3 +979,36 @@ function mainProcess() {
     requestAnimationFrame(mainProcess);
 }
 requestAnimationFrame(mainProcess);
+function spawnWildAnimal(type) {
+    let spawned = false;
+    for (let attempts = 0; attempts < 100 && !spawned; attempts++) {
+        let rx = Math.floor(Math.random() * X_TILES);
+        let ry = Math.floor(Math.random() * Y_TILES);
+        if (world[rx] && world[rx][ry]) {
+            let tile = world[rx][ry];
+            if (tile.type !== TileType.WATER && tile.type !== TileType.DARK_WATER && tile.entities.length < TILE_ENTITY_LIMIT && tile.worldObjects.length === 0) {
+                let animal;
+                if (type === "Sheep") {
+                    //@ts-ignore
+                    animal = new Sheep();
+                }
+                else if (type === "Cow") {
+                    //@ts-ignore
+                    animal = new Cow();
+                }
+                else {
+                    //@ts-ignore
+                    animal = new Wolf();
+                }
+                tile.addEntity(animal);
+                entities.push({ entity: animal, pos: Vector2(rx, ry) });
+                spawned = true;
+                //@ts-ignore
+                if (typeof TestTools !== "undefined") {
+                    //@ts-ignore
+                    TestTools.updateStats();
+                }
+            }
+        }
+    }
+}

@@ -4,8 +4,8 @@ class Human extends Entity {
     /** The function that is called when a human has to find their next spot to move to for their profession */
     professionMover: (currentX: number, currentY: number) => Vector2 = (x,y) => {return Vector2(0,0)};
 
-    constructor(professionLetter: string) {
-        super(true, true, "red");
+    constructor(professionLetter: string, customGenome?: Genome) {
+        super(true, true, "red", customGenome);
         this.professionLetter = professionLetter;
     }
 
@@ -14,8 +14,8 @@ class Human extends Entity {
     }
 
     move: ((currentX: number, currentY: number) => Vector2) | null = (currentX, currentY) => {
-        // Survival needs ticking
-        this.hunger = Math.min(100, this.hunger + 0.05);
+        // Survival needs ticking scaled by hungerRateGene
+        this.hunger = Math.min(100, this.hunger + 0.05 * this.genome.hungerRateGene);
         if (this.hunger > 50) {
             this.eatFood();
         }
@@ -41,6 +41,83 @@ class Human extends Entity {
             // Resource drop-off override
             var hasResources = this.inventory.some(entry => !(entry.item instanceof Tool) && entry.count > 0);
             var isFull = this.getTotalItemCount() >= INVENTORY_MAX_CAPACITY;
+
+            // Mating check
+            let receptive = this.ticksAlive > 3000 && this.hunger < 40 && (this.ticksAlive - this.lastMatingTick > this.matingCooldown);
+            let isBusy = this.hunger > 80 || hasResources;
+            
+            //@ts-ignore
+            let currentLimit = (typeof MAX_ENTITIES_LIMIT !== "undefined") ? MAX_ENTITIES_LIMIT : 150;
+            if (receptive && !isBusy && entities.length < currentLimit) {
+                let partnerPos = this.findNearest(currentX, currentY, 15, (tile) => {
+                    return tile.entities.some(e => {
+                        if (e !== this && e instanceof Human && e.isLiving) {
+                            let isPartnerReceptive = e.ticksAlive > 3000 && e.hunger < 40 && (e.ticksAlive - e.lastMatingTick > e.matingCooldown);
+                            return isPartnerReceptive;
+                        }
+                        return false;
+                    });
+                });
+                
+                if (partnerPos) {
+                    this.stateText = "Seeking Mate";
+                    
+                    if (Math.abs(currentX - partnerPos.x) <= 1 && Math.abs(currentY - partnerPos.y) <= 1) {
+                        let partnerTile = world[partnerPos.x][partnerPos.y];
+                        let partner = partnerTile.entities.find(e => e !== this && e instanceof Human && e.isLiving) as Human;
+                        
+                        if (partner) {
+                            let spawned = false;
+                            for (let dx = -1; dx <= 1 && !spawned; dx++) {
+                                for (let dy = -1; dy <= 1 && !spawned; dy++) {
+                                    let bx = currentX + dx;
+                                    let by = currentY + dy;
+                                    if (world[bx] && world[bx][by]) {
+                                        let bTile = world[bx][by];
+                                        //@ts-ignore
+                                        let entLimit = (typeof TILE_ENTITY_LIMIT !== "undefined") ? TILE_ENTITY_LIMIT : 2;
+                                        if (bTile.canBeTraversed() && bTile.entities.length < entLimit && bTile.worldObjects.length === 0) {
+                                            let babyGenome = Entity.crossoverAndMutate(this, partner);
+                                            let babyLetter = Math.random() < 0.5 ? this.professionLetter : partner.professionLetter;
+                                            
+                                            let baby: Human;
+                                            if (babyLetter === "W") baby = new Woodcutter(babyGenome);
+                                            else if (babyLetter === "F") baby = new Fisherman(babyGenome);
+                                            else if (babyLetter === "M") baby = new Miner(babyGenome);
+                                            else baby = new Farmer(babyGenome);
+                                            
+                                            bTile.addEntity(baby);
+                                            entities.push({ entity: baby, pos: Vector2(bx, by) });
+                                            
+                                            this.lastMatingTick = this.ticksAlive;
+                                            partner.lastMatingTick = partner.ticksAlive;
+                                            
+                                            this.stateText = "Idle";
+                                            partner.stateText = "Idle";
+                                            spawned = true;
+                                            
+                                            //@ts-ignore
+                                            if (typeof TestTools !== "undefined") {
+                                                //@ts-ignore
+                                                TestTools.updateStats();
+                                            }
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        return Vector2(0, 0);
+                    } else {
+                        var now = performance.now();
+                        if (now - this.lastPathfindTime >= this.pathfindCooldown) {
+                            this.lastPathfindTime = now;
+                            this.moveTo(Vector2(currentX, currentY), partnerPos);
+                        }
+                        return Vector2(0, 0);
+                    }
+                }
+            }
 
             if (this.hunger > 80 || (hasResources && (isFull || this.stateText === "Returning to Storage" || this.stateText === "Finding Food"))) {
                 if (this.hunger > 80) this.stateText = "Finding Food";

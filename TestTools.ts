@@ -212,9 +212,9 @@ class TestTools {
                     <span class="detail-label">ID:</span>
                     <span class="detail-val" title="${ent.id}">${ent.id.slice(0, 8)}...</span>
                 </div>
-                <div class="detail-row">
+                 <div class="detail-row">
                     <span class="detail-label">Ticks Alive:</span>
-                    <span class="detail-val" id="liveInspectorTicks">${ent.ticksAlive}</span>
+                    <span class="detail-val" id="liveInspectorTicks">${ent.ticksAlive} / ${Math.round(ent.maxAge)}</span>
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Current Pos:</span>
@@ -231,6 +231,23 @@ class TestTools {
                 <div class="detail-row">
                     <span class="detail-label">Path Cooldown:</span>
                     <span class="detail-val">${pathfindCooldownVal}</span>
+                </div>
+                <div class="sub-label">Genetics & Reproduction</div>
+                <div class="detail-row">
+                    <span class="detail-label">Gene Lifespan:</span>
+                    <span class="detail-val" id="liveInspectorGeneLifespan">${ent.genome ? ent.genome.lifespanGene.toFixed(2) : "1.00"}x</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Gene Hunger:</span>
+                    <span class="detail-val" id="liveInspectorGeneHunger">${ent.genome ? ent.genome.hungerRateGene.toFixed(2) : "1.00"}x</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Gene Speed:</span>
+                    <span class="detail-val" id="liveInspectorGeneSpeed">${ent.genome ? ent.genome.speedGene.toFixed(2) : "1.00"}x</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Mating Status:</span>
+                    <span class="detail-val" id="liveInspectorMatingStatus">Checking...</span>
                 </div>
                 <div class="sub-label">Inventory (${ent.getTotalItemCount()}/${20})</div>
                 <div id="liveInspectorInventory">${inventoryHtml}</div>
@@ -256,7 +273,37 @@ class TestTools {
         if (hungerEl) hungerEl.innerText = `${Math.round(ent.hunger)}%`;
 
         const ticksEl = document.getElementById("liveInspectorTicks");
-        if (ticksEl) ticksEl.innerText = ent.ticksAlive.toString();
+        if (ticksEl) ticksEl.innerText = `${ent.ticksAlive} / ${Math.round(ent.maxAge)}`;
+
+        // Genetics live update
+        const geneLifespanEl = document.getElementById("liveInspectorGeneLifespan");
+        if (geneLifespanEl) geneLifespanEl.innerText = ent.genome ? `${ent.genome.lifespanGene.toFixed(2)}x` : "1.00x";
+
+        const geneHungerEl = document.getElementById("liveInspectorGeneHunger");
+        if (geneHungerEl) geneHungerEl.innerText = ent.genome ? `${ent.genome.hungerRateGene.toFixed(2)}x` : "1.00x";
+
+        const geneSpeedEl = document.getElementById("liveInspectorGeneSpeed");
+        if (geneSpeedEl) geneSpeedEl.innerText = ent.genome ? `${ent.genome.speedGene.toFixed(2)}x` : "1.00x";
+
+        const matingStatusEl = document.getElementById("liveInspectorMatingStatus");
+        if (matingStatusEl) {
+            let isMature = ent.ticksAlive > (ent.constructor.name === "Human" ? 3000 : 2000);
+            let onMatingCooldown = ent.ticksAlive - ent.lastMatingTick <= ent.matingCooldown;
+            let matingStatus = "Not Receptive";
+            if (ent.health <= 0) {
+                matingStatus = "Dead";
+            } else if (!isMature) {
+                matingStatus = `Juvenile (Mature at ${ent.constructor.name === "Human" ? 3000 : 2000})`;
+            } else if (onMatingCooldown) {
+                let remaining = Math.round(ent.matingCooldown - (ent.ticksAlive - ent.lastMatingTick));
+                matingStatus = `Cooldown (${remaining} ticks)`;
+            } else if (ent.hunger >= 40) {
+                matingStatus = "Hungry (Needs < 40)";
+            } else {
+                matingStatus = "Ready";
+            }
+            matingStatusEl.innerText = matingStatus;
+        }
 
         const posEl = document.getElementById("liveInspectorPos");
         if (posEl) {

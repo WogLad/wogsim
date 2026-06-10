@@ -1,7 +1,7 @@
 "use strict";
 class Farmer extends Human {
-    constructor() {
-        super("P"); // 'P' for Peasant/Farmer
+    constructor(customGenome) {
+        super("P", customGenome);
         /** The radius of the search square that is used to find the human's next position */
         this.radarLength = 10;
         this.addToInventory(new Tool("Hoe"));

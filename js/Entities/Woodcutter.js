@@ -1,7 +1,7 @@
 "use strict";
 class Woodcutter extends Human {
-    constructor() {
-        super("W");
+    constructor(customGenome) {
+        super("W", customGenome);
         /** The radius of the search square that is used to find the human's next position */
         this.radarLength = 10; // TODO: Add a stroke rect in the debug draw function to show the radar of the human
         this.addToInventory(new Tool("Stone Axe"));

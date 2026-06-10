@@ -59,7 +59,13 @@
   
       openHeap.push(start);
   
+      var iterations = 0;
+      var maxIterations = options.maxIterations || 1000;
       while (openHeap.size() > 0) {
+        iterations++;
+        if (iterations > maxIterations) {
+          break;
+        }
   
         // Grab the lowest f(x) to process next.  Heap keeps this sorted for us.
         var currentNode = openHeap.pop();

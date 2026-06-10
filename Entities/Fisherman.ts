@@ -2,8 +2,8 @@ class Fisherman extends Human {
     /** The radius of the search square that is used to find the human's next position */
     radarLength: number = 10;
     
-    constructor() {
-        super("F");
+    constructor(customGenome?: Genome) {
+        super("F", customGenome);
 
         this.addToInventory(new Tool("Fishing Rod"));
 
