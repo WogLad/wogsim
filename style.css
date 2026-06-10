@@ -36,7 +36,7 @@ img {
 #fpsCounter {
     position: fixed;
     top: 15px;
-    right: 15px;
+    left: 15px;
     background: rgba(10, 10, 35, 0.75);
     color: #00ffcc;
     padding: 6px 12px;
@@ -56,7 +56,7 @@ img {
 /* Testing Tools GUI Panel */
 #testToolsPanel {
     position: fixed;
-    bottom: 15px;
+    top: 15px;
     right: 15px;
     width: 250px;
     background: rgba(10, 10, 35, 0.85);
