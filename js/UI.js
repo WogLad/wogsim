@@ -21,14 +21,20 @@ canvas.addEventListener("click", (e) => {
     }
     if (!handled) {
         var clickTile = world[clickX] ? world[clickX][clickY] : undefined;
-        if (clickTile) {
+        if (clickTile && tileInspectorDiv) {
             tileInspectorDiv.innerHTML = clickTile.getTileInspectorInfoDiv().innerHTML;
         }
     }
 });
-document.getElementById("togglePauseButton").addEventListener("click", (e) => {
-    PAUSED = !PAUSED;
-});
+var togglePauseButton = document.getElementById("togglePauseButton");
+if (togglePauseButton) {
+    togglePauseButton.addEventListener("click", (e) => {
+        PAUSED = !PAUSED;
+        togglePauseButton.innerText = PAUSED ? "Resume" : "Pause";
+        togglePauseButton.style.background = PAUSED ? "rgba(255, 51, 102, 0.4)" : "rgba(255, 255, 255, 0.1)";
+        togglePauseButton.style.borderColor = PAUSED ? "#ff3366" : "rgba(255, 255, 255, 0.2)";
+    });
+}
 // DONE: Add movement controls that can adjust the camera offset
 var isMouseDown = false;
 var dragStartMousePos = { x: 0, y: 0 };

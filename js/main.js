@@ -2,8 +2,8 @@
 var canvas = document.getElementById("canvas");
 var ctx = canvas.getContext("2d", { alpha: false });
 // CANVAS PROPERTIES
-const CANVAS_WIDTH = 960;
-const CANVAS_HEIGHT = 540;
+var CANVAS_WIDTH = window.innerWidth;
+var CANVAS_HEIGHT = window.innerHeight;
 const CANVAS_BG_COLOR = "#f0ffff";
 const BASE_TILE_SIZE = 15;
 var TILE_SIZE = 15;
@@ -30,6 +30,13 @@ var MOVEMENT_DELAY = 15;
 const INVENTORY_MAX_CAPACITY = 20;
 canvas.height = CANVAS_HEIGHT;
 canvas.width = CANVAS_WIDTH;
+window.addEventListener("resize", () => {
+    CANVAS_WIDTH = window.innerWidth;
+    CANVAS_HEIGHT = window.innerHeight;
+    canvas.width = CANVAS_WIDTH;
+    canvas.height = CANVAS_HEIGHT;
+    setCameraOffset(CAMERA_OFFSET.x, CAMERA_OFFSET.y);
+});
 var tileInspectorDiv = document.getElementById("tileInspectorDiv");
 var mousePos = { x: 0, y: 0 };
 canvas.onpointermove = (e) => {

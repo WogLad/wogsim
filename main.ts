@@ -2,8 +2,8 @@ var canvas: HTMLCanvasElement = document.getElementById("canvas") as HTMLCanvasE
 var ctx: CanvasRenderingContext2D = canvas.getContext("2d", { alpha: false }) as CanvasRenderingContext2D;
 
 // CANVAS PROPERTIES
-const CANVAS_WIDTH: number = 960;
-const CANVAS_HEIGHT: number = 540;
+var CANVAS_WIDTH: number = window.innerWidth;
+var CANVAS_HEIGHT: number = window.innerHeight;
 const CANVAS_BG_COLOR: string = "#f0ffff";
 const BASE_TILE_SIZE: number = 15;
 var TILE_SIZE: number = 15;
@@ -34,6 +34,14 @@ const INVENTORY_MAX_CAPACITY: number = 20;
 
 canvas.height = CANVAS_HEIGHT;
 canvas.width = CANVAS_WIDTH;
+
+window.addEventListener("resize", () => {
+    CANVAS_WIDTH = window.innerWidth;
+    CANVAS_HEIGHT = window.innerHeight;
+    canvas.width = CANVAS_WIDTH;
+    canvas.height = CANVAS_HEIGHT;
+    setCameraOffset(CAMERA_OFFSET.x, CAMERA_OFFSET.y);
+});
 
 var tileInspectorDiv = document.getElementById("tileInspectorDiv");
 
