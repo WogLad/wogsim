@@ -7,16 +7,19 @@ class Woodcutter extends Human {
         this.addToInventory(new Tool("Stone Axe"));
         // DONE: Return the position of a tree if close to any
         this.professionMover = (currentX, currentY) => {
-            // DONE: Remove the tree from the WorldTile
             var currentTile = world[currentX][currentY];
-            if (currentTile.worldObjects.length > 0 && currentTile.worldObjects[currentTile.worldObjects.length - 1].name == "tree") {
-                currentTile.worldObjects.pop();
+            // Cut down the tree/pine_tree/palm_tree on the current tile
+            var treeIdx = currentTile.worldObjects.findIndex(o => o.name === "tree" || o.name === "pine_tree" || o.name === "palm_tree");
+            if (treeIdx !== -1) {
+                currentTile.worldObjects.splice(treeIdx, 1);
+                this.addToInventory(new Item("Wood"));
                 drawTileToOffscreen(currentX, currentY);
+                // Stay on this tile to finish the chop
+                return Vector2(currentX, currentY);
             }
+            // Find the nearest tree of any type within radar
             var nearestTree = this.findNearest(currentX, currentY, this.radarLength, (tile) => {
-                var worldObjs = tile.worldObjects;
-                var objLen = worldObjs.length;
-                return objLen > 0 && worldObjs[objLen - 1].name === "tree";
+                return tile.worldObjects.some(o => o.name === "tree" || o.name === "pine_tree" || o.name === "palm_tree");
             });
             if (nearestTree) {
                 return nearestTree;

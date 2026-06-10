@@ -4,7 +4,26 @@ enum TileType {
     GRASS = "#008001",
     GROUND = "#74663B",
     WATER = "#005EB8",
-    DARK_WATER = "#003399"
+    DARK_WATER = "#003399",
+    SAND = "#EEDC82",
+    DESERT = "#E4C978",
+    SWAMP = "#2F4F4F",
+    SNOW = "#FFFFFF"
+}
+
+function getFBM(x: number, y: number, octaves: number, persistence: number, lacunarity: number, scale: number): number {
+    let total = 0;
+    let frequency = scale;
+    let amplitude = 1.0;
+    let maxValue = 0;
+    for (let i = 0; i < octaves; i++) {
+        //@ts-ignore
+        total += perlin.get(x * frequency, y * frequency) * amplitude;
+        maxValue += amplitude;
+        amplitude *= persistence;
+        frequency *= lacunarity;
+    }
+    return total / maxValue;
 }
 
 class WorldTile {
@@ -15,18 +34,77 @@ class WorldTile {
     worldObjects: WorldObject[] = [];
 
     constructor(x: number, y: number) {
-        this.setTileType(x,y); // Sets the type of tile
-        
-        // 20% chance to add an apple to the tile
-        if (Math.random() < 0.2) {
-            this.items.push(new Item("Apple"));
+        this.setTileType(x, y); // Sets the type of tile
+        this.spawnResources();
+    }
+
+    spawnResources() {
+        this.items = [];
+        this.worldObjects = [];
+
+        var type = this.type;
+        var rand = Math.random();
+
+        if (type === TileType.DARK_GRASS) {
+            // Forest
+            if (rand < 0.40) {
+                this.worldObjects.push(new WorldObject("tree"));
+            } else if (rand < 0.50) {
+                this.items.push(new Item("Apple"));
+            }
+        } 
+        else if (type === TileType.GRASS) {
+            // Plains
+            if (rand < 0.08) {
+                this.worldObjects.push(new WorldObject("wheat"));
+            } else if (rand < 0.16) {
+                this.worldObjects.push(new WorldObject("shrub"));
+            } else if (rand < 0.22) {
+                this.items.push(new Item("Apple"));
+            }
+        } 
+        else if (type === TileType.DESERT) {
+            // Desert
+            if (rand < 0.15) {
+                this.worldObjects.push(new WorldObject("cactus"));
+            }
+        } 
+        else if (type === TileType.SWAMP) {
+            // Swamp
+            if (rand < 0.25) {
+                this.worldObjects.push(new WorldObject("reed"));
+            } else if (rand < 0.40) {
+                this.items.push(new Item("Berry"));
+            }
+        } 
+        else if (type === TileType.WATER || type === TileType.DARK_WATER) {
+            // Water
+            if (rand < 0.08) {
+                this.worldObjects.push(new WorldObject("fish"));
+            }
+        } 
+        else if (type === TileType.SNOW) {
+            // Snow mountain
+            if (rand < 0.15) {
+                this.worldObjects.push(new WorldObject("stone"));
+            } else if (rand < 0.25) {
+                this.worldObjects.push(new WorldObject("pine_tree"));
+            }
+        } 
+        else if (type === TileType.SAND) {
+            // Beach
+            if (rand < 0.05) {
+                this.worldObjects.push(new WorldObject("palm_tree"));
+            } else if (rand < 0.15) {
+                this.items.push(new Item("Shell"));
+            }
         }
     }
 
     getTileInspectorInfoDiv(): HTMLDivElement {
         var inspectorText: string = "";
         inspectorText += `pos: ${this.pos.x}, ${this.pos.y}<br>`;
-        inspectorText += `type: <br>`; // TODO: Fix this to show the tile type as a string
+        inspectorText += `type: ${this.type}<br>`; 
         inspectorText += `entity_count: ${this.entities.length}<br>`;
         inspectorText += `item_count: ${this.items.length}<br>`;
         inspectorText += `world_object_count: ${this.worldObjects.length}`;
@@ -40,31 +118,44 @@ class WorldTile {
      * Assigns a random tile type to the tile
      */
     setTileType(x: number, y: number) {
-        this.pos = Vector2(x,y);
+        this.pos = Vector2(x, y);
 
-        const noiseFactor: number = 0.07; // Multiply the coords with this to get desired noise values
-        //@ts-ignore
-        var noiseVal: number = perlin.get(x*noiseFactor, y*noiseFactor);
-        if (noiseVal >= 0.15) {
-            this.type = TileType.DARK_GRASS;
-            if (noiseVal > 0.4) {
-                this.worldObjects.push(new WorldObject("tree"));
-            }
-        }
-        else if (noiseVal < 0.15 && noiseVal >= 0) {
-            this.type = TileType.GRASS;
-        }
-        else if (noiseVal < 0 && noiseVal >= -0.25) {
-            this.type = TileType.GROUND;
-        }
-        else if (noiseVal < -0.25 && noiseVal >= -0.35) {
-            this.type = TileType.WATER;
-        }
-        else if (noiseVal < -0.35) {
+        // FBM parameters: x, y, octaves, persistence, lacunarity, scale
+        var elevation = getFBM(x, y, 4, 0.45, 2.1, 0.03);
+        var moisture = getFBM(x + 5000, y + 5000, 3, 0.5, 2.0, 0.03);
+
+        if (elevation < -0.3) {
             this.type = TileType.DARK_WATER;
         }
-        // var w = 255*noiseVal;
-        // this.type = `rgb(${w}, ${w}, ${w})`;
+        else if (elevation < -0.15) {
+            this.type = TileType.WATER;
+        }
+        else if (elevation < -0.08) {
+            this.type = TileType.SAND; // Beach/Sand
+        }
+        else if (elevation > 0.4) {
+            this.type = TileType.SNOW; // Mountain Peak
+        }
+        else {
+            // Land biomes
+            if (moisture < -0.2) {
+                this.type = TileType.DESERT;
+            }
+            else if (moisture < 0.2) {
+                if (elevation > 0.18) {
+                    this.type = TileType.GROUND; // Dry hills
+                } else {
+                    this.type = TileType.GRASS;  // Plains
+                }
+            }
+            else {
+                if (elevation < 0.05) {
+                    this.type = TileType.SWAMP;  // Wetlands
+                } else {
+                    this.type = TileType.DARK_GRASS; // Forest
+                }
+            }
+        }
     }
 
     /**

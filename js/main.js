@@ -108,6 +108,141 @@ function init() {
     // Perform initial draw of terrain backgrounds to offscreen canvas
     drawEntireWorldToOffscreen();
 }
+function drawProceduralObject(ctx, name, x, y, size) {
+    ctx.save();
+    // Center calculations
+    var cx = x + size / 2;
+    var cy = y + size / 2;
+    if (name === "tree") {
+        // Fallback tree: trunk + green circle
+        ctx.fillStyle = "#5c4033"; // Brown trunk
+        ctx.fillRect(cx - size * 0.1, y + size * 0.5, size * 0.2, size * 0.5);
+        ctx.fillStyle = "darkgreen";
+        ctx.beginPath();
+        ctx.arc(cx, y + size * 0.4, size * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    else if (name === "pine_tree") {
+        // Pine tree: brown trunk + stacked green triangles
+        ctx.fillStyle = "#4a3328"; // Trunk
+        ctx.fillRect(cx - size * 0.08, y + size * 0.7, size * 0.16, size * 0.3);
+        ctx.fillStyle = "#1e3f20"; // Dark pine green
+        // Bottom triangle
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.15, y + size * 0.75);
+        ctx.lineTo(x + size * 0.85, y + size * 0.75);
+        ctx.lineTo(cx, y + size * 0.4);
+        ctx.closePath();
+        ctx.fill();
+        // Top triangle
+        ctx.beginPath();
+        ctx.moveTo(x + size * 0.25, y + size * 0.45);
+        ctx.lineTo(x + size * 0.75, y + size * 0.45);
+        ctx.lineTo(cx, y + size * 0.1);
+        ctx.closePath();
+        ctx.fill();
+    }
+    else if (name === "palm_tree") {
+        // Palm tree: curved trunk + green fronds
+        ctx.strokeStyle = "#8b5a2b";
+        ctx.lineWidth = size * 0.12;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(cx, y + size);
+        ctx.quadraticCurveTo(x + size * 0.3, y + size * 0.5, cx - size * 0.1, y + size * 0.3);
+        ctx.stroke();
+        ctx.fillStyle = "#2e8b57"; // Sea green
+        var lx = cx - size * 0.1;
+        var ly = y + size * 0.3;
+        var fronds = [
+            { tx: lx - size * 0.35, ty: ly + size * 0.1 },
+            { tx: lx - size * 0.4, ty: ly - size * 0.15 },
+            { tx: lx, ty: ly - size * 0.3 },
+            { tx: lx + size * 0.35, ty: ly - size * 0.15 },
+            { tx: lx + size * 0.3, ty: ly + size * 0.15 }
+        ];
+        for (var f of fronds) {
+            ctx.beginPath();
+            ctx.moveTo(lx, ly);
+            ctx.quadraticCurveTo((lx + f.tx) / 2, (ly + f.ty) / 2 - size * 0.1, f.tx, f.ty);
+            ctx.lineWidth = size * 0.08;
+            ctx.strokeStyle = "#2e8b57";
+            ctx.stroke();
+        }
+    }
+    else if (name === "cactus") {
+        // Cactus: green trunk and arms
+        ctx.fillStyle = "#2d7a47";
+        // Main stem
+        ctx.fillRect(cx - size * 0.12, y + size * 0.2, size * 0.24, size * 0.8);
+        // Left arm
+        ctx.fillRect(x + size * 0.15, y + size * 0.45, size * 0.2, size * 0.12);
+        ctx.fillRect(x + size * 0.15, y + size * 0.25, size * 0.12, size * 0.2);
+        // Right arm
+        ctx.fillRect(cx, y + size * 0.35, size * 0.25, size * 0.12);
+        ctx.fillRect(x + size * 0.7, y + size * 0.15, size * 0.12, size * 0.2);
+    }
+    else if (name === "shrub") {
+        ctx.fillStyle = "#228b22";
+        ctx.beginPath();
+        ctx.arc(cx - size * 0.15, y + size * 0.65, size * 0.25, 0, Math.PI * 2);
+        ctx.arc(cx + size * 0.15, y + size * 0.65, size * 0.25, 0, Math.PI * 2);
+        ctx.arc(cx, y + size * 0.4, size * 0.28, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    else if (name === "wheat") {
+        // Golden stalks
+        ctx.strokeStyle = "#daa520";
+        ctx.lineWidth = 1.5;
+        var stalks = [-size * 0.2, 0, size * 0.2];
+        for (var s of stalks) {
+            ctx.beginPath();
+            ctx.moveTo(cx + s, y + size);
+            ctx.quadraticCurveTo(cx + s * 1.5, y + size * 0.5, cx + s * 0.8, y + size * 0.2);
+            ctx.stroke();
+            ctx.fillStyle = "#ffd700";
+            ctx.beginPath();
+            ctx.arc(cx + s * 0.8, y + size * 0.2, 2, 0, Math.PI * 2);
+            ctx.arc(cx + s * 1.0, y + size * 0.35, 1.5, 0, Math.PI * 2);
+            ctx.arc(cx + s * 0.6, y + size * 0.5, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+    else if (name === "reed") {
+        ctx.strokeStyle = "#3cb371";
+        ctx.lineWidth = 1.2;
+        var reedOffsets = [-size * 0.25, -size * 0.05, size * 0.15];
+        for (var ro of reedOffsets) {
+            ctx.beginPath();
+            ctx.moveTo(cx + ro, y + size);
+            ctx.quadraticCurveTo(cx + ro + size * 0.1, y + size * 0.4, cx + ro - size * 0.05, y + size * 0.1);
+            ctx.stroke();
+        }
+    }
+    else if (name === "fish") {
+        ctx.fillStyle = "#4682b4";
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + size * 0.05, size * 0.22, size * 0.1, Math.PI / 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(cx - size * 0.18, cy + size * 0.02);
+        ctx.lineTo(cx - size * 0.32, cy - size * 0.1);
+        ctx.lineTo(cx - size * 0.32, cy + size * 0.15);
+        ctx.closePath();
+        ctx.fill();
+    }
+    else if (name === "stone") {
+        ctx.fillStyle = "#808080";
+        ctx.beginPath();
+        ctx.arc(cx - size * 0.15, y + size * 0.7, size * 0.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#a9a9a9";
+        ctx.beginPath();
+        ctx.arc(cx + size * 0.1, y + size * 0.65, size * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    ctx.restore();
+}
 function drawTileToOffscreen(x, y) {
     var tile = world[x] ? world[x][y] : undefined;
     if (!tile)
@@ -117,7 +252,7 @@ function drawTileToOffscreen(x, y) {
     // Draw tile terrain color (ignore entities since they are dynamic)
     offscreenCtx.fillStyle = tile.type;
     offscreenCtx.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
-    // Draw worldObject sprite (like trees)
+    // Draw worldObject sprite
     var worldObjs = tile.worldObjects;
     var objLen = worldObjs.length;
     if (objLen > 0) {
@@ -125,6 +260,9 @@ function drawTileToOffscreen(x, y) {
         var spriteImg = sprites.get(spriteName);
         if (spriteImg && spriteImg.complete) {
             offscreenCtx.drawImage(spriteImg, screenX, screenY, TILE_SIZE, TILE_SIZE);
+        }
+        else {
+            drawProceduralObject(offscreenCtx, spriteName, screenX, screenY, TILE_SIZE);
         }
     }
 }

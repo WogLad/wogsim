@@ -84,11 +84,15 @@ class TestTools {
 
     static getTileTypeName(type: string): string {
         switch (type) {
-            case "DARKGREEN": return "Dark Grass";
-            case "#008001": return "Grass";
-            case "#74663B": return "Ground";
-            case "#005EB8": return "Water";
-            case "#003399": return "Dark Water";
+            case "DARKGREEN": return "Forest";
+            case "#008001": return "Grassland";
+            case "#74663B": return "Dry Hills";
+            case "#005EB8": return "Water (Shallow)";
+            case "#003399": return "Water (Deep)";
+            case "#EEDC82": return "Beach (Sand)";
+            case "#E4C978": return "Desert";
+            case "#2F4F4F": return "Swamp";
+            case "#FFFFFF": return "Snowy Peak";
             default: return type;
         }
     }
