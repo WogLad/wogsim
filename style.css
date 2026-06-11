@@ -334,8 +334,13 @@ img {
 }
 
 @keyframes overlayFadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
 
 .stats-popup {
@@ -362,6 +367,7 @@ img {
         opacity: 0;
         transform: scale(0.92) translateY(20px);
     }
+
     to {
         opacity: 1;
         transform: scale(1) translateY(0);
@@ -523,20 +529,23 @@ img {
     line-height: 1.6;
     color: rgba(255, 255, 255, 0.85);
     min-height: 120px;
-    max-height: 250px;
+    max-height: 350px;
     overflow-y: auto;
 }
 
 .stats-card-body::-webkit-scrollbar {
     width: 4px;
 }
+
 .stats-card-body::-webkit-scrollbar-track {
     background: rgba(0, 0, 0, 0.1);
 }
+
 .stats-card-body::-webkit-scrollbar-thumb {
     background: rgba(0, 255, 204, 0.2);
     border-radius: 2px;
 }
+
 .stats-card-body::-webkit-scrollbar-thumb:hover {
     background: rgba(0, 255, 204, 0.4);
 }
@@ -636,12 +645,29 @@ img {
     transition: width 0.3s ease;
 }
 
-.stat-meter-fill.green { background: linear-gradient(90deg, #00cc88, #00ffcc); }
-.stat-meter-fill.red { background: linear-gradient(90deg, #cc3355, #ff3366); }
-.stat-meter-fill.gold { background: linear-gradient(90deg, #cc9900, #ffd700); }
-.stat-meter-fill.blue { background: linear-gradient(90deg, #3366cc, #7bc0ff); }
-.stat-meter-fill.purple { background: linear-gradient(90deg, #8833cc, #bb66ff); }
-.stat-meter-fill.orange { background: linear-gradient(90deg, #cc6600, #ff9933); }
+.stat-meter-fill.green {
+    background: linear-gradient(90deg, #00cc88, #00ffcc);
+}
+
+.stat-meter-fill.red {
+    background: linear-gradient(90deg, #cc3355, #ff3366);
+}
+
+.stat-meter-fill.gold {
+    background: linear-gradient(90deg, #cc9900, #ffd700);
+}
+
+.stat-meter-fill.blue {
+    background: linear-gradient(90deg, #3366cc, #7bc0ff);
+}
+
+.stat-meter-fill.purple {
+    background: linear-gradient(90deg, #8833cc, #bb66ff);
+}
+
+.stat-meter-fill.orange {
+    background: linear-gradient(90deg, #cc6600, #ff9933);
+}
 
 /* Section divider inside cards */
 .stat-divider {
@@ -791,6 +817,11 @@ img {
     flex-direction: column !important;
 }
 
+#statsPopulation {
+    max-height: 500px;
+    overflow-x: hidden;
+}
+
 .stats-card.expanded canvas#popGraphCanvas {
     flex: 1 !important;
     min-height: 380px !important;
@@ -801,6 +832,7 @@ img {
         opacity: 0;
         transform: translate(-50%, -45%) scale(0.95);
     }
+
     to {
         opacity: 1;
         transform: translate(-50%, -50%) scale(1);
