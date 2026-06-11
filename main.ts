@@ -9,10 +9,10 @@ const BASE_TILE_SIZE: number = 15;
 var TILE_SIZE: number = 15;
 const OUTLINE_THICKNESS = 2; // <DEPRECATED> Thickness of the lines that make up the box surrounding the mouse
 // WORLD PROPERTIES
-const WORLD_WIDTH: number = 960 * 5;
-const WORLD_HEIGHT: number = 540 * 5;
-const X_TILES: number = Math.floor(WORLD_WIDTH / BASE_TILE_SIZE);
-const Y_TILES: number = Math.floor(WORLD_HEIGHT / BASE_TILE_SIZE);
+const X_TILES: number = 320;
+const Y_TILES: number = 180;
+const WORLD_WIDTH: number = X_TILES * BASE_TILE_SIZE;
+const WORLD_HEIGHT: number = Y_TILES * BASE_TILE_SIZE;
 var CAMERA_OFFSET: Vector2 = Vector2(
     Math.floor(X_TILES / 2) - Math.floor(CANVAS_WIDTH / TILE_SIZE / 2),
     Math.floor(Y_TILES / 2) - Math.floor(CANVAS_HEIGHT / TILE_SIZE / 2)
@@ -148,7 +148,7 @@ function init(): void {
     }
 
     // Generate 50 village settlements across the map using WASM
-    wasmExports.generateVillagesWasm(5);
+    wasmExports.generateVillagesWasm(50);
     var genSize = wasmExports.getGenBufferSize();
     var genPtr = wasmExports.getGenBufferPointer();
     var genArray = new Int32Array(wasmMemory!.buffer, genPtr, genSize * 3);
@@ -1020,6 +1020,7 @@ async function loadWasm() {
     });
     wasmExports = module.instance.exports;
     wasmMemory = wasmExports.memory;
+    wasmExports.initWorld(X_TILES, Y_TILES);
     init();
     requestAnimationFrame(mainProcess);
 }

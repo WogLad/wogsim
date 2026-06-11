@@ -1,12 +1,12 @@
 // Wogsim AssemblyScript A* Pathfinding and core utilities
 
-export const X_TILES = 320;
-export const Y_TILES = 180;
-export const GRID_SIZE = X_TILES * Y_TILES;
+export var X_TILES: i32 = 0;
+export var Y_TILES: i32 = 0;
+export var GRID_SIZE: i32 = 0;
 
 // We will use a flat array to represent the grid. 
 // 0 = wall/water, > 0 = walk weight (1 for standard ground)
-export var grid = new Float32Array(GRID_SIZE);
+export var grid: Float32Array = new Float32Array(0);
 
 export function setGridWeight(x: i32, y: i32, weight: f32): void {
   if (x >= 0 && x < X_TILES && y >= 0 && y < Y_TILES) {
@@ -23,18 +23,34 @@ export function getGridWeight(x: i32, y: i32): f32 {
 
 // A* Node struct flattened for performance
 // f, g, h, parentIndex, closed, visited
-var node_g = new Float32Array(GRID_SIZE);
-var node_h = new Float32Array(GRID_SIZE);
-var node_f = new Float32Array(GRID_SIZE);
-var node_parent = new Int32Array(GRID_SIZE);
-var node_closed = new Uint8Array(GRID_SIZE);
-var node_visited = new Uint8Array(GRID_SIZE);
-var node_version = new Uint32Array(GRID_SIZE);
+var node_g: Float32Array = new Float32Array(0);
+var node_h: Float32Array = new Float32Array(0);
+var node_f: Float32Array = new Float32Array(0);
+var node_parent: Int32Array = new Int32Array(0);
+var node_closed: Uint8Array = new Uint8Array(0);
+var node_visited: Uint8Array = new Uint8Array(0);
+var node_version: Uint32Array = new Uint32Array(0);
 var current_version: u32 = 1;
 
 // Binary Heap implementation for A*
-var heap = new Int32Array(GRID_SIZE);
+var heap: Int32Array = new Int32Array(0);
 var heapSize: i32 = 0;
+
+export function initWorld(xTiles: i32, yTiles: i32): void {
+  X_TILES = xTiles;
+  Y_TILES = yTiles;
+  GRID_SIZE = xTiles * yTiles;
+
+  grid = new Float32Array(GRID_SIZE);
+  node_g = new Float32Array(GRID_SIZE);
+  node_h = new Float32Array(GRID_SIZE);
+  node_f = new Float32Array(GRID_SIZE);
+  node_parent = new Int32Array(GRID_SIZE);
+  node_closed = new Uint8Array(GRID_SIZE);
+  node_visited = new Uint8Array(GRID_SIZE);
+  node_version = new Uint32Array(GRID_SIZE);
+  heap = new Int32Array(GRID_SIZE);
+}
 
 function heapPush(index: i32): void {
   heap[heapSize] = index;
@@ -140,7 +156,7 @@ export function getResultPathLength(): i32 {
 
 export function findPath(startX: i32, startY: i32, endX: i32, endY: i32): boolean {
   if (startX < 0 || startX >= X_TILES || startY < 0 || startY >= Y_TILES ||
-      endX < 0 || endX >= X_TILES || endY < 0 || endY >= Y_TILES) {
+    endX < 0 || endX >= X_TILES || endY < 0 || endY >= Y_TILES) {
     resultPathLength = 0;
     return false;
   }
@@ -169,8 +185,8 @@ export function findPath(startX: i32, startY: i32, endX: i32, endY: i32): boolea
   var D2: f32 = 1.41421356;
 
   // Neighbor offsets (8-way diagonal)
-  var dx = [-1,  1,  0,  0, -1,  1, -1,  1];
-  var dy = [ 0,  0, -1,  1, -1, -1,  1,  1];
+  var dx = [-1, 1, 0, 0, -1, 1, -1, 1];
+  var dy = [0, 0, -1, 1, -1, -1, 1, 1];
 
   while (heapSize > 0 && iterations < maxIterations) {
     iterations++;
@@ -188,7 +204,7 @@ export function findPath(startX: i32, startY: i32, endX: i32, endY: i32): boolea
         count++;
         curr = node_parent[curr];
       }
-      
+
       // Reverse array in place because we traced from end to start
       for (let i = 0; i < count / 2; i++) {
         var tmpX = resultPath[i * 2];

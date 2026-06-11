@@ -7,14 +7,17 @@
     "asbuild:debug": "asc assembly/index.ts --target debug",
     "asbuild:release": "asc assembly/index.ts --target release",
     "asbuild": "npm run asbuild:debug && npm run asbuild:release && node scripts/encodeWasm.js",
-    "start": "npx serve ."
+    "start": "npx serve .",
+    "build": "npm run asbuild",
+    "watch": "chokidar \"assembly/**/*\" -c \"npm run build\""
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "devDependencies": {
-    "assemblyscript": "^0.28.18"
+    "assemblyscript": "^0.28.18",
+    "chokidar-cli": "^3.0.0"
   },
   "type": "module",
   "exports": {

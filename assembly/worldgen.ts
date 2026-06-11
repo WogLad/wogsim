@@ -2,7 +2,7 @@ import { X_TILES, Y_TILES, grid } from "./index";
 
 // Command structure: [cmdType, x, y]
 // cmdType: 0=TownHall, 1=Campfire, 2=Ground, 3=Fence, 4=Sheep, 5=Cow, 6=Woodcutter, 7=Fisherman, 8=Miner, 9=Farmer
-var genBuffer = new Int32Array(10000);
+var genBuffer = new Int32Array(500000);
 var genSize: i32 = 0;
 
 export function getGenBufferPointer(): usize {
@@ -28,8 +28,8 @@ function isWater(x: i32, y: i32): boolean {
 }
 
 // Temporary storage for town halls to check distance
-var townHallsX = new Int32Array(50);
-var townHallsY = new Int32Array(50);
+var townHallsX = new Int32Array(1000);
+var townHallsY = new Int32Array(1000);
 var townHallsCount: i32 = 0;
 
 export function generateVillagesWasm(count: i32): void {
@@ -37,8 +37,9 @@ export function generateVillagesWasm(count: i32): void {
     townHallsCount = 0;
     var generated = 0;
     var attempts = 0;
+    var maxAttempts = count * 20;
 
-    while (generated < count && attempts < 200) {
+    while (generated < count && attempts < maxAttempts) {
         attempts++;
         var cx = 15 + i32(Math.random() * (X_TILES - 30));
         var cy = 15 + i32(Math.random() * (Y_TILES - 30));

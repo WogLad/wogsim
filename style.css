@@ -523,6 +523,22 @@ img {
     line-height: 1.6;
     color: rgba(255, 255, 255, 0.85);
     min-height: 120px;
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+.stats-card-body::-webkit-scrollbar {
+    width: 4px;
+}
+.stats-card-body::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+}
+.stats-card-body::-webkit-scrollbar-thumb {
+    background: rgba(0, 255, 204, 0.2);
+    border-radius: 2px;
+}
+.stats-card-body::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 255, 204, 0.4);
 }
 
 /* Stat row items inside cards */
