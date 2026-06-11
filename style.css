@@ -403,6 +403,29 @@ img {
     border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.stats-export-btn {
+    background: rgba(0, 255, 204, 0.15);
+    border: 1px solid rgba(0, 255, 204, 0.3);
+    border-radius: 6px;
+    color: #00ffcc;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 6px 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+}
+
+.stats-export-btn:hover {
+    background: rgba(0, 255, 204, 0.3);
+    border-color: #00ffcc;
+    box-shadow: 0 0 10px rgba(0, 255, 204, 0.4);
+    transform: translateY(-1px);
+}
+
+
 .stats-close-btn {
     width: 32px;
     height: 32px;

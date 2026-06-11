@@ -526,8 +526,31 @@ class TestTools {
         sheep: number[],
         cow: number[],
         wolf: number[],
-        total: number[]
-    } = { ticks: [], woodcutter: [], fisherman: [], miner: [], farmer: [], sheep: [], cow: [], wolf: [], total: [] };
+        total: number[],
+        avgLifespan: number[],
+        avgHungerRate: number[],
+        avgSpeed: number[],
+        totalGold: number[],
+        totalFood: number[],
+        totalMaterials: number[],
+        avgHealth: number[],
+        avgHunger: number[],
+        starvationRate: number[],
+        homelessnessRate: number[],
+        avgAge: number[],
+        juvenileRatio: number[],
+        working: number[],
+        sleeping: number[],
+        idle: number[],
+        seekingMate: number[]
+    } = { 
+        ticks: [], woodcutter: [], fisherman: [], miner: [], farmer: [], sheep: [], cow: [], wolf: [], total: [],
+        avgLifespan: [], avgHungerRate: [], avgSpeed: [],
+        totalGold: [], totalFood: [], totalMaterials: [],
+        avgHealth: [], avgHunger: [], starvationRate: [], homelessnessRate: [],
+        avgAge: [], juvenileRatio: [],
+        working: [], sleeping: [], idle: [], seekingMate: []
+    };
     static readonly POP_HISTORY_MAX = 600; // Max data points (~30,000 ticks at 50-tick interval)
     static readonly POP_SAMPLE_INTERVAL = 50; // Record every N ticks
     static lastPopSampleTick: number = -1;
@@ -559,6 +582,31 @@ class TestTools {
         document.querySelector(".stats-card.expanded")?.classList.remove("expanded");
     }
 
+    static exportDataToCSV() {
+        const hist = this.popHistory;
+        if (hist.ticks.length === 0) {
+            console.warn("No data to export.");
+            return;
+        }
+
+        let csvContent = "Tick,TotalPopulation,Woodcutter,Fisherman,Miner,Farmer,Sheep,Cow,Wolf,AvgLifespan,AvgHungerRate,AvgSpeed,TotalGold,TotalFood,TotalMaterials,AvgHealth,AvgHunger,StarvationRate,HomelessnessRate,AvgAge,JuvenileRatio,Working,Sleeping,Idle,SeekingMate\n";
+        
+        for (let i = 0; i < hist.ticks.length; i++) {
+            csvContent += `${hist.ticks[i]},${hist.total[i]},${hist.woodcutter[i]},${hist.fisherman[i]},${hist.miner[i]},${hist.farmer[i]},${hist.sheep[i]},${hist.cow[i]},${hist.wolf[i]},${hist.avgLifespan[i]},${hist.avgHungerRate[i]},${hist.avgSpeed[i]},${hist.totalGold[i]},${hist.totalFood[i]},${hist.totalMaterials[i]},${hist.avgHealth[i]},${hist.avgHunger[i]},${hist.starvationRate[i]},${hist.homelessnessRate[i]},${hist.avgAge[i]},${hist.juvenileRatio[i]},${hist.working[i]},${hist.sleeping[i]},${hist.idle[i]},${hist.seekingMate[i]}\n`;
+        }
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        //@ts-ignore
+        link.setAttribute("download", `wogsim_population_data_tick_${typeof ticks !== "undefined" ? ticks : 0}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
     static recordPopulationSample() {
         //@ts-ignore
         let currentTick = typeof ticks !== "undefined" ? ticks : 0;
@@ -567,15 +615,86 @@ class TestTools {
         this.lastPopSampleTick = currentTick;
 
         let w = 0, f = 0, m = 0, p = 0, s = 0, c = 0, wo = 0;
-        for (let i = 0; i < entities.length; i++) {
-            let name = entities[i].entity.constructor.name;
-            if (name === "Woodcutter") w++;
-            else if (name === "Fisherman") f++;
-            else if (name === "Miner") m++;
-            else if (name === "Farmer") p++;
+        let sumLifespan = 0, sumHungerRate = 0, sumSpeed = 0, genomeCount = 0;
+        let totalGold = 0, totalFood = 0, totalMaterials = 0;
+        let totalHealth = 0, totalHunger = 0, starvingCount = 0, humansCount = 0, homelessCount = 0;
+        let totalAge = 0, juveniles = 0;
+        let working = 0, sleeping = 0, idle = 0, seekingMate = 0;
+        
+        let totalEntities = entities.length;
+
+        for (let i = 0; i < totalEntities; i++) {
+            const ent = entities[i].entity;
+            const name = ent.constructor.name;
+            
+            // Population
+            if (name === "Woodcutter") { w++; humansCount++; }
+            else if (name === "Fisherman") { f++; humansCount++; }
+            else if (name === "Miner") { m++; humansCount++; }
+            else if (name === "Farmer") { p++; humansCount++; }
             else if (name === "Sheep") s++;
             else if (name === "Cow") c++;
             else if (name === "Wolf") wo++;
+
+            // Genetics
+            if (ent.genome) {
+                genomeCount++;
+                sumLifespan += ent.genome.lifespanGene;
+                sumHungerRate += ent.genome.hungerRateGene;
+                sumSpeed += ent.genome.speedGene;
+            }
+
+            // Health/Hunger
+            totalHealth += ent.health;
+            totalHunger += ent.hunger;
+            if (ent.hunger > 80) starvingCount++;
+            
+            // Age
+            totalAge += ent.ticksAlive;
+            let matureAge = (name === "Sheep" || name === "Cow" || name === "Wolf") ? 2000 : 3000;
+            if (ent.ticksAlive < matureAge) juveniles++;
+
+            // Gold & Housing
+            if (ent.gold !== undefined) totalGold += ent.gold;
+            if (["Woodcutter", "Fisherman", "Miner", "Farmer"].includes(name)) {
+                if (!ent.ownsHouse) homelessCount++;
+            }
+
+            // Inventory
+            if (ent.inventory) {
+                for (let inv of ent.inventory) {
+                    let itemName = inv.item ? inv.item.name : ((inv as any).name || "");
+                    if (["raw_meat", "cooked_meat", "fish", "bread", "wheat", "apple", "berry"].includes(itemName.toLowerCase())) totalFood += inv.count;
+                    else if (["log", "stone", "iron_ore", "wood"].includes(itemName.toLowerCase())) totalMaterials += inv.count;
+                }
+            }
+
+            // Activity
+            let state = ent.stateText || "Unknown";
+            if (state.includes("Working") || state.includes("Gather") || state.includes("Chop") || state.includes("Min") || state.includes("Farm") || state.includes("Fish")) working++;
+            else if (state.includes("Sleep")) sleeping++;
+            else if (state.includes("Idle") || state.includes("Wander")) idle++;
+            else if (state.includes("Seeking Mate")) seekingMate++;
+        }
+
+        // Add townhall stockpiles
+        //@ts-ignore
+        if (typeof townHallPositions !== "undefined" && typeof world !== "undefined") {
+            //@ts-ignore
+            for (let thPos of townHallPositions) {
+                //@ts-ignore
+                let tile = world[thPos.x] ? world[thPos.x][thPos.y] : null;
+                if (tile) {
+                    //@ts-ignore
+                    let thObj = tile.worldObjects.find(o => o.name === "town_hall");
+                    if (thObj && thObj.stockpile) {
+                        let sp = thObj.stockpile;
+                        totalGold += (sp.gold || 0);
+                        totalFood += (sp.fish || 0) + (sp.wheat || 0) + (sp.apple || 0) + (sp.berry || 0);
+                        totalMaterials += (sp.wood || 0) + (sp.stone || 0);
+                    }
+                }
+            }
         }
 
         let h = this.popHistory;
@@ -587,7 +706,29 @@ class TestTools {
         h.sheep.push(s);
         h.cow.push(c);
         h.wolf.push(wo);
-        h.total.push(entities.length);
+        h.total.push(totalEntities);
+
+        // New Metrics
+        h.avgLifespan.push(genomeCount > 0 ? +(sumLifespan / genomeCount).toFixed(2) : 0);
+        h.avgHungerRate.push(genomeCount > 0 ? +(sumHungerRate / genomeCount).toFixed(2) : 0);
+        h.avgSpeed.push(genomeCount > 0 ? +(sumSpeed / genomeCount).toFixed(2) : 0);
+        
+        h.totalGold.push(totalGold);
+        h.totalFood.push(totalFood);
+        h.totalMaterials.push(totalMaterials);
+
+        h.avgHealth.push(totalEntities > 0 ? +(totalHealth / totalEntities).toFixed(2) : 0);
+        h.avgHunger.push(totalEntities > 0 ? +(totalHunger / totalEntities).toFixed(2) : 0);
+        h.starvationRate.push(totalEntities > 0 ? +(starvingCount / totalEntities * 100).toFixed(2) : 0);
+        h.homelessnessRate.push(humansCount > 0 ? +(homelessCount / humansCount * 100).toFixed(2) : 0);
+
+        h.avgAge.push(totalEntities > 0 ? +(totalAge / totalEntities).toFixed(2) : 0);
+        h.juvenileRatio.push(totalEntities > 0 ? +(juveniles / totalEntities * 100).toFixed(2) : 0);
+
+        h.working.push(working);
+        h.sleeping.push(sleeping);
+        h.idle.push(idle);
+        h.seekingMate.push(seekingMate);
     }
 
     static renderPopulationGraph(container: HTMLElement) {
@@ -638,7 +779,23 @@ class TestTools {
                 sheep: hist.sheep.slice(startIdx),
                 cow: hist.cow.slice(startIdx),
                 wolf: hist.wolf.slice(startIdx),
-                total: hist.total.slice(startIdx)
+                total: hist.total.slice(startIdx),
+                avgLifespan: hist.avgLifespan.slice(startIdx),
+                avgHungerRate: hist.avgHungerRate.slice(startIdx),
+                avgSpeed: hist.avgSpeed.slice(startIdx),
+                totalGold: hist.totalGold.slice(startIdx),
+                totalFood: hist.totalFood.slice(startIdx),
+                totalMaterials: hist.totalMaterials.slice(startIdx),
+                avgHealth: hist.avgHealth.slice(startIdx),
+                avgHunger: hist.avgHunger.slice(startIdx),
+                starvationRate: hist.starvationRate.slice(startIdx),
+                homelessnessRate: hist.homelessnessRate.slice(startIdx),
+                avgAge: hist.avgAge.slice(startIdx),
+                juvenileRatio: hist.juvenileRatio.slice(startIdx),
+                working: hist.working.slice(startIdx),
+                sleeping: hist.sleeping.slice(startIdx),
+                idle: hist.idle.slice(startIdx),
+                seekingMate: hist.seekingMate.slice(startIdx)
             };
             dataLen = this.POP_HISTORY_MAX;
         }
@@ -1287,11 +1444,17 @@ window.addEventListener("DOMContentLoaded", () => {
     // World Stats button
     const statsBtn = document.getElementById("worldStatsBtn");
     const statsCloseBtn = document.getElementById("statsCloseBtn");
+    const statsExportBtn = document.getElementById("statsExportBtn");
     const statsOverlay = document.getElementById("worldStatsOverlay");
 
     if (statsBtn) {
         statsBtn.addEventListener("click", () => {
             TestTools.openWorldStats();
+        });
+    }
+    if (statsExportBtn) {
+        statsExportBtn.addEventListener("click", () => {
+            TestTools.exportDataToCSV();
         });
     }
     if (statsCloseBtn) {

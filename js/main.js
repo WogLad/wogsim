@@ -908,7 +908,7 @@ function mainProcess() {
     // For the world ticks
     if (!PAUSED) {
         ticks++;
-        if (ticks == 1000000000) {
+        if (ticks == 1000000000) { // TO DO: Handle this properly, there's a better way to do this.
             ticks = 0;
         }
         //@ts-ignore
