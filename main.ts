@@ -29,7 +29,7 @@ const INVENTORY_MAX_CAPACITY: number = 20;
 // Village settings and spawn configuration
 var townHallPositions: Vector2[] = [];
 var HUMAN_SPAWN_INTERVAL: number = 100; // Tweak this value to change runtime spawn rate (lower = faster spawn)
-var MAX_ENTITIES_LIMIT: number = 150; // Maximum number of concurrent entities in the world to maintain high performance
+var MAX_ENTITIES_LIMIT: number = 500; // Maximum number of concurrent entities in the world to maintain high performance
 
 canvas.height = CANVAS_HEIGHT;
 canvas.width = CANVAS_WIDTH;
@@ -986,14 +986,20 @@ function mainProcess(): void {
             ticks = 0;
         }
 
+        //@ts-ignore
+        if (typeof TestTools !== "undefined") {
+            //@ts-ignore
+            TestTools.recordPopulationSample();
+        }
+
         // Rescue Spawner to prevent total extinction (runs every 300 ticks)
         if (ticks % 300 === 0) {
             // 1. Human Village Extinction Rescue
             for (let thPos of townHallPositions) {
-                let villageHumans = entities.filter(d => d.entity instanceof Human && 
+                let villageHumans = entities.filter(d => d.entity instanceof Human &&
                     Math.max(Math.abs(d.pos.x - thPos.x), Math.abs(d.pos.y - thPos.y)) <= 45
                 );
-                
+
                 if (villageHumans.length < 2 && entities.length < MAX_ENTITIES_LIMIT) {
                     let spawned = false;
                     for (let dx = -2; dx <= 2 && !spawned; dx++) {
@@ -1018,7 +1024,7 @@ function mainProcess(): void {
                                     tile.addEntity(villager);
                                     entities.push({ entity: villager, pos: Vector2(vx, vy) });
                                     spawned = true;
-                                    
+
                                     //@ts-ignore
                                     if (typeof TestTools !== "undefined") {
                                         //@ts-ignore
@@ -1080,7 +1086,7 @@ function spawnWildAnimal(type: string): void {
                 tile.addEntity(animal);
                 entities.push({ entity: animal, pos: Vector2(rx, ry) });
                 spawned = true;
-                
+
                 //@ts-ignore
                 if (typeof TestTools !== "undefined") {
                     //@ts-ignore

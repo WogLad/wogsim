@@ -15,6 +15,7 @@
             <h3 style="margin: 0; font-size: 13px; font-weight: 600; color: #00ffcc; white-space: nowrap;">🛠️ Debug Menu</h3>
             <div style="display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; flex-shrink: 0;">
                 <button id="togglePauseButton" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 3px 6px; border-radius: 4px; font-size: 10px; cursor: pointer; font-weight: bold; filter: none;">Pause</button>
+                <button id="worldStatsBtn" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 3px 6px; border-radius: 4px; font-size: 10px; cursor: pointer; font-weight: bold; filter: none;">📊 Stats</button>
                 <label style="display: flex; align-items: center; gap: 3px; font-size: 10px; cursor: pointer; user-select: none; color: #00ffcc; font-weight: bold; white-space: nowrap;">
                     <input type="checkbox" id="debugDrawCheckbox" style="cursor: pointer; margin: 0; transform: scale(0.95);"> Debug
                 </label>
@@ -74,6 +75,94 @@
             <div class="panel-info">
                 <div id="entityStats">Total Entities: 0</div>
                 <div class="help-text">Click on the canvas to inspect tiles.</div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- World Stats Popup Overlay -->
+    <div id="worldStatsOverlay" class="stats-overlay hidden">
+        <div class="stats-popup">
+            <div class="stats-header">
+                <h2>📊 World Statistics Overview</h2>
+                <div class="stats-header-right">
+                    <span id="statsTickCounter" class="stats-tick-counter">Tick: 0</span>
+                    <button id="statsCloseBtn" class="stats-close-btn">✕</button>
+                </div>
+            </div>
+            <div class="stats-body">
+                <!-- Row 1: Population & Economy -->
+                <div class="stats-row">
+                    <div class="stats-card">
+                        <div class="stats-card-header">
+                            <span class="stats-card-icon">👥</span>
+                            <span class="stats-card-title">Population Census</span>
+                        </div>
+                        <div class="stats-card-body" id="statsPopulation"></div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stats-card-header">
+                            <span class="stats-card-icon">💰</span>
+                            <span class="stats-card-title">Global Economy</span>
+                        </div>
+                        <div class="stats-card-body" id="statsEconomy"></div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stats-card-header">
+                            <span class="stats-card-icon">🏘️</span>
+                            <span class="stats-card-title">Village Summary</span>
+                        </div>
+                        <div class="stats-card-body" id="statsVillages"></div>
+                    </div>
+                </div>
+                <!-- Row 2: Activity & Genetics & Health -->
+                <div class="stats-row">
+                    <div class="stats-card">
+                        <div class="stats-card-header">
+                            <span class="stats-card-icon">⚡</span>
+                            <span class="stats-card-title">Activity Breakdown</span>
+                        </div>
+                        <div class="stats-card-body" id="statsActivity"></div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stats-card-header">
+                            <span class="stats-card-icon">🧬</span>
+                            <span class="stats-card-title">Genetic Pool Analysis</span>
+                        </div>
+                        <div class="stats-card-body" id="statsGenetics"></div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stats-card-header">
+                            <span class="stats-card-icon">❤️</span>
+                            <span class="stats-card-title">Health & Survival</span>
+                        </div>
+                        <div class="stats-card-body" id="statsHealth"></div>
+                    </div>
+                </div>
+                <!-- Row 3: Environment & Resources & Inventory -->
+                <div class="stats-row">
+                    <div class="stats-card">
+                        <div class="stats-card-header">
+                            <span class="stats-card-icon">🌍</span>
+                            <span class="stats-card-title">World Environment</span>
+                        </div>
+                        <div class="stats-card-body" id="statsEnvironment"></div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stats-card-header">
+                            <span class="stats-card-icon">📦</span>
+                            <span class="stats-card-title">Total Stockpile Resources</span>
+                        </div>
+                        <div class="stats-card-body" id="statsResources"></div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stats-card-header">
+                            <span class="stats-card-icon">🎒</span>
+                            <span class="stats-card-title">Carried Inventory (All Entities)</span>
+                        </div>
+                        <div class="stats-card-body" id="statsInventory"></div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

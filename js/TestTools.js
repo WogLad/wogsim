@@ -74,6 +74,8 @@ class TestTools {
         if (el) {
             el.innerText = `Total Entities: ${entities.length}`;
         }
+        // Continuously record population snapshots for the time-series graph
+        this.recordPopulationSample();
     }
     static getTileTypeName(type) {
         switch (type) {
@@ -483,13 +485,806 @@ class TestTools {
         }
         return true;
     }
+    static openWorldStats() {
+        const overlay = document.getElementById("worldStatsOverlay");
+        if (!overlay)
+            return;
+        overlay.classList.remove("hidden");
+        this.isStatsOpen = true;
+        this.refreshWorldStats();
+        // Auto-refresh every 1 second while open
+        this.statsRefreshInterval = setInterval(() => {
+            if (this.isStatsOpen) {
+                this.refreshWorldStats();
+            }
+        }, 1000);
+    }
+    static closeWorldStats() {
+        var _a, _b;
+        const overlay = document.getElementById("worldStatsOverlay");
+        if (overlay)
+            overlay.classList.add("hidden");
+        this.isStatsOpen = false;
+        if (this.statsRefreshInterval) {
+            clearInterval(this.statsRefreshInterval);
+            this.statsRefreshInterval = null;
+        }
+        // Clean up expanded graph if any
+        (_a = document.getElementById("statsGraphBackdrop")) === null || _a === void 0 ? void 0 : _a.remove();
+        (_b = document.querySelector(".stats-card.expanded")) === null || _b === void 0 ? void 0 : _b.classList.remove("expanded");
+    }
+    static recordPopulationSample() {
+        //@ts-ignore
+        let currentTick = typeof ticks !== "undefined" ? ticks : 0;
+        // Only sample every POP_SAMPLE_INTERVAL ticks
+        if (currentTick - this.lastPopSampleTick < this.POP_SAMPLE_INTERVAL && this.lastPopSampleTick >= 0)
+            return;
+        this.lastPopSampleTick = currentTick;
+        let w = 0, f = 0, m = 0, p = 0, s = 0, c = 0, wo = 0;
+        for (let i = 0; i < entities.length; i++) {
+            let name = entities[i].entity.constructor.name;
+            if (name === "Woodcutter")
+                w++;
+            else if (name === "Fisherman")
+                f++;
+            else if (name === "Miner")
+                m++;
+            else if (name === "Farmer")
+                p++;
+            else if (name === "Sheep")
+                s++;
+            else if (name === "Cow")
+                c++;
+            else if (name === "Wolf")
+                wo++;
+        }
+        let h = this.popHistory;
+        h.ticks.push(currentTick);
+        h.woodcutter.push(w);
+        h.fisherman.push(f);
+        h.miner.push(m);
+        h.farmer.push(p);
+        h.sheep.push(s);
+        h.cow.push(c);
+        h.wolf.push(wo);
+        h.total.push(entities.length);
+    }
+    static renderPopulationGraph(container) {
+        var _a;
+        // Create or reuse canvas
+        let canvas = container.querySelector("canvas#popGraphCanvas");
+        if (!canvas) {
+            canvas = document.createElement("canvas");
+            canvas.id = "popGraphCanvas";
+            canvas.style.width = "100%";
+            canvas.style.height = "220px";
+            canvas.style.borderRadius = "6px";
+            canvas.style.display = "block";
+        }
+        let isExpanded = !!((_a = container.closest(".stats-card")) === null || _a === void 0 ? void 0 : _a.classList.contains("expanded"));
+        let h = isExpanded ? 400 : 220;
+        // Set actual pixel size from container width
+        let rect = container.getBoundingClientRect();
+        let dpr = window.devicePixelRatio || 1;
+        let w = Math.floor(rect.width - 32); // account for padding
+        canvas.width = w * dpr;
+        canvas.height = h * dpr;
+        canvas.style.width = w + "px";
+        canvas.style.height = h + "px";
+        let gCtx = canvas.getContext("2d");
+        if (!gCtx)
+            return;
+        gCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        // Background
+        gCtx.fillStyle = "rgba(0, 0, 0, 0.3)";
+        gCtx.fillRect(0, 0, w, h);
+        let hist = this.popHistory;
+        let dataLen = hist.ticks.length;
+        // Slice history if not expanded and length exceeds limit
+        let displayHistory = hist;
+        if (!isExpanded && dataLen > this.POP_HISTORY_MAX) {
+            let startIdx = dataLen - this.POP_HISTORY_MAX;
+            displayHistory = {
+                ticks: hist.ticks.slice(startIdx),
+                woodcutter: hist.woodcutter.slice(startIdx),
+                fisherman: hist.fisherman.slice(startIdx),
+                miner: hist.miner.slice(startIdx),
+                farmer: hist.farmer.slice(startIdx),
+                sheep: hist.sheep.slice(startIdx),
+                cow: hist.cow.slice(startIdx),
+                wolf: hist.wolf.slice(startIdx),
+                total: hist.total.slice(startIdx)
+            };
+            dataLen = this.POP_HISTORY_MAX;
+        }
+        if (dataLen < 2) {
+            gCtx.fillStyle = "rgba(255, 255, 255, 0.3)";
+            gCtx.font = "12px sans-serif";
+            gCtx.textAlign = "center";
+            gCtx.fillText("Collecting data... (need at least 2 samples)", w / 2, h / 2);
+            // Build the HTML with canvas
+            container.innerHTML = "";
+            container.appendChild(this.buildGraphHeader(isExpanded));
+            container.appendChild(canvas);
+            container.appendChild(this.buildGraphLegend());
+            return;
+        }
+        // Chart margins
+        let ml = 40, mr = 12, mt = 12, mb = 28;
+        let cw = w - ml - mr;
+        let ch = h - mt - mb;
+        // Find Y max across all series
+        let yMax = 0;
+        let series = [
+            { key: "Woodcutter", color: "#ff7b7b", data: displayHistory.woodcutter },
+            { key: "Fisherman", color: "#7bc0ff", data: displayHistory.fisherman },
+            { key: "Miner", color: "#d0d0d0", data: displayHistory.miner },
+            { key: "Farmer", color: "#e5ff82", data: displayHistory.farmer },
+            { key: "Sheep", color: "#ffffff", data: displayHistory.sheep },
+            { key: "Cow", color: "#f5deb3", data: displayHistory.cow },
+            { key: "Wolf", color: "#888888", data: displayHistory.wolf },
+        ];
+        for (let s of series) {
+            for (let v of s.data) {
+                if (v > yMax)
+                    yMax = v;
+            }
+        }
+        yMax = Math.max(yMax, 5); // Minimum scale
+        yMax = Math.ceil(yMax * 1.1); // 10% headroom
+        let xMin = displayHistory.ticks[0];
+        let xMax = displayHistory.ticks[dataLen - 1];
+        let xRange = Math.max(xMax - xMin, 1);
+        // Grid lines
+        gCtx.strokeStyle = "rgba(255, 255, 255, 0.06)";
+        gCtx.lineWidth = 1;
+        let yGridCount = 5;
+        gCtx.font = "10px Menlo, Monaco, monospace";
+        gCtx.fillStyle = "rgba(255, 255, 255, 0.3)";
+        gCtx.textAlign = "right";
+        for (let gi = 0; gi <= yGridCount; gi++) {
+            let yVal = Math.round((yMax / yGridCount) * gi);
+            let yPos = mt + ch - (yVal / yMax) * ch;
+            gCtx.beginPath();
+            gCtx.moveTo(ml, yPos);
+            gCtx.lineTo(ml + cw, yPos);
+            gCtx.stroke();
+            gCtx.fillText(yVal.toString(), ml - 4, yPos + 3);
+        }
+        // X-axis tick labels
+        gCtx.textAlign = "center";
+        gCtx.fillStyle = "rgba(255, 255, 255, 0.3)";
+        let xLabelCount = Math.min(6, dataLen);
+        for (let xi = 0; xi < xLabelCount; xi++) {
+            let idx = Math.floor((xi / (xLabelCount - 1)) * (dataLen - 1));
+            let tickVal = displayHistory.ticks[idx];
+            let xPos = ml + ((tickVal - xMin) / xRange) * cw;
+            gCtx.fillText(tickVal.toString(), xPos, h - 4);
+        }
+        // Draw each series line
+        for (let s of series) {
+            gCtx.strokeStyle = s.color;
+            gCtx.lineWidth = 1.8;
+            gCtx.lineJoin = "round";
+            gCtx.beginPath();
+            for (let i = 0; i < dataLen; i++) {
+                let x = ml + ((displayHistory.ticks[i] - xMin) / xRange) * cw;
+                let y = mt + ch - (s.data[i] / yMax) * ch;
+                if (i === 0)
+                    gCtx.moveTo(x, y);
+                else
+                    gCtx.lineTo(x, y);
+            }
+            gCtx.stroke();
+        }
+        // Axis lines
+        gCtx.strokeStyle = "rgba(255, 255, 255, 0.15)";
+        gCtx.lineWidth = 1;
+        gCtx.beginPath();
+        gCtx.moveTo(ml, mt);
+        gCtx.lineTo(ml, mt + ch);
+        gCtx.lineTo(ml + cw, mt + ch);
+        gCtx.stroke();
+        // Assemble the card HTML
+        container.innerHTML = "";
+        container.appendChild(this.buildGraphHeader(isExpanded));
+        container.appendChild(canvas);
+        container.appendChild(this.buildGraphLegend());
+    }
+    static buildGraphHeader(isExpanded) {
+        let header = document.createElement("div");
+        header.style.cssText = "display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;";
+        let title = document.createElement("div");
+        title.className = "stat-big-label";
+        title.style.cssText = "margin: 0; text-align: left;";
+        title.innerText = isExpanded ? "FULL POPULATION HISTORY (TICK 0+)" : "POPULATION OVER TIME (RECENT)";
+        let btnContainer = document.createElement("div");
+        btnContainer.style.cssText = "display: flex; gap: 8px;";
+        if (!isExpanded) {
+            let btn = document.createElement("button");
+            btn.className = "pop-graph-toggle-btn";
+            btn.innerText = "Bar View";
+            btn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                TestTools.popGraphMode = false;
+                TestTools.refreshWorldStats();
+            });
+            btnContainer.appendChild(btn);
+        }
+        let expandBtn = document.createElement("button");
+        expandBtn.className = "pop-graph-toggle-btn";
+        if (isExpanded) {
+            expandBtn.style.cssText = "background: rgba(255, 51, 102, 0.2); border-color: rgba(255, 51, 102, 0.4); color: #ff3366;";
+        }
+        expandBtn.innerText = isExpanded ? "✕ Collapse" : "🔍 Expand";
+        expandBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            let popEl = document.getElementById("statsPopulation");
+            if (popEl) {
+                let card = popEl.closest(".stats-card");
+                if (card) {
+                    card.classList.toggle("expanded");
+                    let overlay = document.getElementById("statsGraphBackdrop");
+                    if (card.classList.contains("expanded")) {
+                        if (!overlay) {
+                            overlay = document.createElement("div");
+                            overlay.id = "statsGraphBackdrop";
+                            overlay.style.cssText = "position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); z-index: 20500; transition: opacity 0.2s ease; border-radius: 16px;";
+                            overlay.addEventListener("click", (ev) => {
+                                ev.stopPropagation();
+                                card === null || card === void 0 ? void 0 : card.classList.remove("expanded");
+                                overlay === null || overlay === void 0 ? void 0 : overlay.remove();
+                                TestTools.refreshWorldStats();
+                            });
+                            let popup = card.closest(".stats-popup");
+                            if (popup) {
+                                popup.appendChild(overlay);
+                            }
+                        }
+                    }
+                    else {
+                        overlay === null || overlay === void 0 ? void 0 : overlay.remove();
+                    }
+                }
+            }
+            TestTools.refreshWorldStats();
+        });
+        btnContainer.appendChild(expandBtn);
+        header.appendChild(title);
+        header.appendChild(btnContainer);
+        return header;
+    }
+    static buildGraphLegend() {
+        let legend = document.createElement("div");
+        legend.className = "pop-graph-legend";
+        let items = [
+            { label: "Woodcutter", color: "#ff7b7b" },
+            { label: "Fisherman", color: "#7bc0ff" },
+            { label: "Miner", color: "#d0d0d0" },
+            { label: "Farmer", color: "#e5ff82" },
+            { label: "Sheep", color: "#ffffff" },
+            { label: "Cow", color: "#f5deb3" },
+            { label: "Wolf", color: "#888888" },
+        ];
+        for (let item of items) {
+            let el = document.createElement("span");
+            el.className = "pop-graph-legend-item";
+            el.innerHTML = `<span class="pop-graph-legend-swatch" style="background: ${item.color};"></span>${item.label}`;
+            legend.appendChild(el);
+        }
+        return legend;
+    }
+    static refreshWorldStats() {
+        // Record population sample
+        this.recordPopulationSample();
+        // ---- Gather all data ----
+        const allEntities = entities;
+        const total = allEntities.length;
+        // Population counts
+        let woodcutters = 0, fishermen = 0, miners = 0, farmers = 0;
+        let sheep = 0, cows = 0, wolves = 0;
+        let humans = 0, animals = 0;
+        // Health/hunger aggregation
+        let totalHealth = 0, totalHunger = 0;
+        let criticalHealth = 0; // health < 30
+        let starving = 0; // hunger > 80
+        let wellFed = 0; // hunger < 20
+        let dead = 0;
+        // Genetics aggregation (only living entities)
+        let sumLifespan = 0, sumHungerRate = 0, sumSpeed = 0;
+        let minLifespan = Infinity, maxLifespan = -Infinity;
+        let minHungerRate = Infinity, maxHungerRate = -Infinity;
+        let minSpeed = Infinity, maxSpeed = -Infinity;
+        let genomeCount = 0;
+        // Age tracking
+        let totalAge = 0;
+        let oldestAge = 0;
+        let youngestAge = Infinity;
+        let juveniles = 0; // ticksAlive < 2000/3000
+        // Activity state counts
+        let activityCounts = {};
+        // Inventory tracking
+        let carriedItems = {};
+        let totalGold = 0;
+        let homeowners = 0;
+        // Mating tracking
+        let seekingMate = 0;
+        let readyToMate = 0;
+        let onMatingCooldown = 0;
+        for (let i = 0; i < total; i++) {
+            const ent = allEntities[i].entity;
+            const name = ent.constructor.name;
+            // Population
+            if (name === "Woodcutter") {
+                woodcutters++;
+                humans++;
+            }
+            else if (name === "Fisherman") {
+                fishermen++;
+                humans++;
+            }
+            else if (name === "Miner") {
+                miners++;
+                humans++;
+            }
+            else if (name === "Farmer") {
+                farmers++;
+                humans++;
+            }
+            else if (name === "Sheep") {
+                sheep++;
+                animals++;
+            }
+            else if (name === "Cow") {
+                cows++;
+                animals++;
+            }
+            else if (name === "Wolf") {
+                wolves++;
+                animals++;
+            }
+            // Health/Hunger
+            totalHealth += ent.health;
+            totalHunger += ent.hunger;
+            if (ent.health < 30)
+                criticalHealth++;
+            if (ent.hunger > 80)
+                starving++;
+            if (ent.hunger < 20)
+                wellFed++;
+            if (ent.health <= 0)
+                dead++;
+            // Age
+            totalAge += ent.ticksAlive;
+            if (ent.ticksAlive > oldestAge)
+                oldestAge = ent.ticksAlive;
+            if (ent.ticksAlive < youngestAge)
+                youngestAge = ent.ticksAlive;
+            let matureAge = (ent instanceof Human) ? 3000 : 2000;
+            if (ent.ticksAlive < matureAge)
+                juveniles++;
+            // Genetics
+            if (ent.genome) {
+                genomeCount++;
+                sumLifespan += ent.genome.lifespanGene;
+                sumHungerRate += ent.genome.hungerRateGene;
+                sumSpeed += ent.genome.speedGene;
+                if (ent.genome.lifespanGene < minLifespan)
+                    minLifespan = ent.genome.lifespanGene;
+                if (ent.genome.lifespanGene > maxLifespan)
+                    maxLifespan = ent.genome.lifespanGene;
+                if (ent.genome.hungerRateGene < minHungerRate)
+                    minHungerRate = ent.genome.hungerRateGene;
+                if (ent.genome.hungerRateGene > maxHungerRate)
+                    maxHungerRate = ent.genome.hungerRateGene;
+                if (ent.genome.speedGene < minSpeed)
+                    minSpeed = ent.genome.speedGene;
+                if (ent.genome.speedGene > maxSpeed)
+                    maxSpeed = ent.genome.speedGene;
+            }
+            // Activity
+            let state = ent.stateText || "Unknown";
+            activityCounts[state] = (activityCounts[state] || 0) + 1;
+            // Inventory
+            for (let inv of ent.inventory) {
+                carriedItems[inv.item.name] = (carriedItems[inv.item.name] || 0) + inv.count;
+            }
+            // Gold & Housing
+            totalGold += ent.gold;
+            if (ent.ownsHouse)
+                homeowners++;
+            // Mating
+            if (ent.stateText === "Seeking Mate")
+                seekingMate++;
+            let isMature = ent.ticksAlive > matureAge;
+            let onCooldown = ent.ticksAlive - ent.lastMatingTick <= ent.matingCooldown;
+            if (isMature && !onCooldown && ent.hunger < 40)
+                readyToMate++;
+            if (isMature && onCooldown)
+                onMatingCooldown++;
+        }
+        // Village stockpile aggregation
+        let globalStockpile = { wood: 0, fish: 0, stone: 0, wheat: 0, apple: 0, berry: 0, gold: 0 };
+        let villageCount = townHallPositions.length;
+        let villageData = [];
+        for (let thPos of townHallPositions) {
+            let tile = world[thPos.x] ? world[thPos.x][thPos.y] : null;
+            let thObj = tile ? tile.worldObjects.find((o) => o.name === "town_hall") : null;
+            let sp = thObj && thObj.stockpile ? thObj.stockpile : { wood: 0, fish: 0, stone: 0, wheat: 0, apple: 0, berry: 0, gold: 0 };
+            for (let key in globalStockpile) {
+                globalStockpile[key] += (sp[key] || 0);
+            }
+            // Count nearby villagers
+            let nearbyHumans = allEntities.filter(d => d.entity instanceof Human &&
+                Math.max(Math.abs(d.pos.x - thPos.x), Math.abs(d.pos.y - thPos.y)) <= 45).length;
+            villageData.push({ pos: thPos, population: nearbyHumans, stockpile: sp });
+        }
+        // World house count (full scan — houses are sparse so sampling could miss them)
+        let houseCount = 0;
+        for (let x = 0; x < X_TILES; x++) {
+            for (let y = 0; y < Y_TILES; y++) {
+                if (world[x][y].worldObjects.some((o) => o.name === "house")) {
+                    houseCount++;
+                }
+            }
+        }
+        // ---- Helper functions ----
+        function statLine(label, value, cssClass = "") {
+            return `<div class="stat-line"><span class="stat-label">${label}</span><span class="stat-value ${cssClass}">${value}</span></div>`;
+        }
+        function meterBar(label, value, max, colorClass) {
+            let pct = max > 0 ? Math.min(100, (value / max) * 100) : 0;
+            return `<div class="stat-meter">
+                <div class="stat-meter-label"><span>${label}</span><span>${Math.round(pct)}%</span></div>
+                <div class="stat-meter-bar"><div class="stat-meter-fill ${colorClass}" style="width: ${pct}%"></div></div>
+            </div>`;
+        }
+        function popBar(label, count, maxCount, color) {
+            let pct = maxCount > 0 ? Math.min(100, (count / maxCount) * 100) : 0;
+            return `<div class="pop-bar-row">
+                <span class="pop-bar-label">${label}</span>
+                <div class="pop-bar-track">
+                    <div class="pop-bar-fill" style="width: ${pct}%; background: ${color};"></div>
+                    <span class="pop-bar-count">${count}</span>
+                </div>
+            </div>`;
+        }
+        // ---- Render sections ----
+        // 1. Population Census
+        const maxPop = Math.max(woodcutters, fishermen, miners, farmers, sheep, cows, wolves, 1);
+        const popEl = document.getElementById("statsPopulation");
+        if (popEl) {
+            if (this.popGraphMode) {
+                // Graph view
+                this.renderPopulationGraph(popEl);
+            }
+            else {
+                // Bar chart view
+                popEl.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div class="stat-big" style="flex: 1;">
+                            <div class="stat-big-number">${total}</div>
+                            <div class="stat-big-label">Total Entities</div>
+                        </div>
+                        <button class="pop-graph-toggle-btn" id="popGraphToggleBtn">📈 Graph</button>
+                    </div>
+                    <hr class="stat-divider">
+                    <div class="stat-section-label">Humans (${humans})</div>
+                    ${popBar("Woodcutter", woodcutters, maxPop, "#ff7b7b")}
+                    ${popBar("Fisherman", fishermen, maxPop, "#7bc0ff")}
+                    ${popBar("Miner", miners, maxPop, "#d0d0d0")}
+                    ${popBar("Farmer", farmers, maxPop, "#e5ff82")}
+                    <div class="stat-section-label">Animals (${animals})</div>
+                    ${popBar("Sheep", sheep, maxPop, "#ffffff")}
+                    ${popBar("Cow", cows, maxPop, "#f5f5dc")}
+                    ${popBar("Wolf", wolves, maxPop, "#888888")}
+                    <hr class="stat-divider">
+                    ${statLine("Entity Cap", `${total} / ${MAX_ENTITIES_LIMIT}`, total >= MAX_ENTITIES_LIMIT ? "danger" : "accent")}
+                `;
+                // Bind the toggle button
+                let toggleBtn = document.getElementById("popGraphToggleBtn");
+                if (toggleBtn) {
+                    toggleBtn.addEventListener("click", (e) => {
+                        e.stopPropagation();
+                        TestTools.popGraphMode = true;
+                        TestTools.refreshWorldStats();
+                    });
+                }
+            }
+        }
+        // 2. Global Economy
+        const econEl = document.getElementById("statsEconomy");
+        if (econEl) {
+            let totalStockpileValue = 0;
+            for (let key in globalStockpile) {
+                if (key === "gold")
+                    continue;
+                let itemName = key.charAt(0).toUpperCase() + key.slice(1);
+                totalStockpileValue += (globalStockpile[key] || 0) * (ITEM_GOLD_VALUES[itemName] || 1);
+            }
+            let totalCarriedValue = 0;
+            for (let key in carriedItems) {
+                totalCarriedValue += (carriedItems[key] || 0) * (ITEM_GOLD_VALUES[key] || 1);
+            }
+            econEl.innerHTML = `
+                <div class="stat-big">
+                    <div class="stat-big-number" style="color: #ffd700;">${totalGold}</div>
+                    <div class="stat-big-label">Total Gold (On Entities)</div>
+                </div>
+                <hr class="stat-divider">
+                ${statLine("Stockpile Gold", globalStockpile.gold, "gold")}
+                ${statLine("Stockpile Value", `${totalStockpileValue} g`, "gold")}
+                ${statLine("Carried Value", `${totalCarriedValue} g`, "")}
+                <hr class="stat-divider">
+                ${statLine("Homeowners", homeowners, "accent")}
+                ${statLine("Houses Built", houseCount, "accent")}
+                ${statLine("Avg Gold/Human", humans > 0 ? (totalGold / humans).toFixed(1) : "0", "gold")}
+            `;
+        }
+        // 3. Village Summary
+        const villEl = document.getElementById("statsVillages");
+        if (villEl) {
+            let villageHtml = `${statLine("Villages", villageCount, "accent")}`;
+            villageHtml += `<hr class="stat-divider">`;
+            for (let vi = 0; vi < villageData.length; vi++) {
+                let vd = villageData[vi];
+                let sp = vd.stockpile;
+                let totalRes = 0;
+                for (let k in sp)
+                    totalRes += (sp[k] || 0);
+                villageHtml += `
+                    <div class="stat-section-label">Village ${vi + 1} (${vd.pos.x}, ${vd.pos.y})</div>
+                    ${statLine("Population", vd.population, vd.population < 2 ? "danger" : "accent")}
+                    ${statLine("Total Resources", totalRes, "")}
+                `;
+            }
+            villEl.innerHTML = villageHtml;
+        }
+        // 4. Activity Breakdown
+        const actEl = document.getElementById("statsActivity");
+        if (actEl) {
+            // Sort activities by count
+            let sorted = Object.entries(activityCounts).sort((a, b) => b[1] - a[1]);
+            let html = "";
+            for (let [state, count] of sorted) {
+                let pct = total > 0 ? ((count / total) * 100).toFixed(1) : "0";
+                let colorClass = "";
+                if (state.includes("Dead"))
+                    colorClass = "danger";
+                else if (state.includes("Hungry") || state.includes("Starv"))
+                    colorClass = "warn";
+                else if (state.includes("Fleeing"))
+                    colorClass = "danger";
+                else if (state.includes("Hunting"))
+                    colorClass = "info";
+                else if (state.includes("Mate"))
+                    colorClass = "purple";
+                else if (state.includes("Gathering") || state.includes("Grazing"))
+                    colorClass = "accent";
+                html += statLine(state, `${count} (${pct}%)`, colorClass);
+            }
+            actEl.innerHTML = html || `<span class="stat-label">No entities active</span>`;
+        }
+        // 5. Genetic Pool Analysis
+        const genEl = document.getElementById("statsGenetics");
+        if (genEl) {
+            let avgLifespan = genomeCount > 0 ? (sumLifespan / genomeCount) : 1;
+            let avgHunger = genomeCount > 0 ? (sumHungerRate / genomeCount) : 1;
+            let avgSpeed = genomeCount > 0 ? (sumSpeed / genomeCount) : 1;
+            if (genomeCount === 0) {
+                minLifespan = 0;
+                maxLifespan = 0;
+                minHungerRate = 0;
+                maxHungerRate = 0;
+                minSpeed = 0;
+                maxSpeed = 0;
+            }
+            genEl.innerHTML = `
+                <div class="stat-section-label">Lifespan Gene</div>
+                ${statLine("Average", avgLifespan.toFixed(3) + "x", "accent")}
+                ${statLine("Range", `${minLifespan.toFixed(2)} — ${maxLifespan.toFixed(2)}`, "")}
+                ${meterBar("Avg vs Baseline", avgLifespan, 2.0, "green")}
+                <div class="stat-section-label">Hunger Rate Gene</div>
+                ${statLine("Average", avgHunger.toFixed(3) + "x", avgHunger > 1.1 ? "warn" : "accent")}
+                ${statLine("Range", `${minHungerRate.toFixed(2)} — ${maxHungerRate.toFixed(2)}`, "")}
+                ${meterBar("Avg vs Baseline", avgHunger, 2.0, avgHunger > 1.1 ? "orange" : "green")}
+                <div class="stat-section-label">Speed Gene</div>
+                ${statLine("Average", avgSpeed.toFixed(3) + "x", "accent")}
+                ${statLine("Range", `${minSpeed.toFixed(2)} — ${maxSpeed.toFixed(2)}`, "")}
+                ${meterBar("Avg vs Baseline", avgSpeed, 2.0, "blue")}
+                <hr class="stat-divider">
+                ${statLine("Genome Samples", genomeCount, "")}
+            `;
+        }
+        // 6. Health & Survival
+        const healthEl = document.getElementById("statsHealth");
+        if (healthEl) {
+            let avgHealth = total > 0 ? (totalHealth / total) : 0;
+            let avgHunger = total > 0 ? (totalHunger / total) : 0;
+            let avgAge = total > 0 ? (totalAge / total) : 0;
+            healthEl.innerHTML = `
+                ${meterBar("Average Health", avgHealth, 100, avgHealth < 50 ? "red" : "green")}
+                ${meterBar("Average Hunger", avgHunger, 100, avgHunger > 60 ? "red" : avgHunger > 30 ? "orange" : "green")}
+                <hr class="stat-divider">
+                ${statLine("Critical Health (<30)", criticalHealth, criticalHealth > 0 ? "danger" : "")}
+                ${statLine("Starving (>80 hunger)", starving, starving > 0 ? "danger" : "")}
+                ${statLine("Well Fed (<20 hunger)", wellFed, "accent")}
+                <hr class="stat-divider">
+                <div class="stat-section-label">Age & Reproduction</div>
+                ${statLine("Average Age", Math.round(avgAge) + " ticks", "")}
+                ${statLine("Oldest Entity", oldestAge + " ticks", "accent")}
+                ${statLine("Juveniles", juveniles, "")}
+                ${statLine("Seeking Mate", seekingMate, seekingMate > 0 ? "info" : "")}
+                ${statLine("Ready to Mate", readyToMate, readyToMate > 0 ? "accent" : "")}
+                ${statLine("Mating Cooldown", onMatingCooldown, "")}
+            `;
+        }
+        // 7. World Environment (tile-type counts — sampled for performance)
+        const envEl = document.getElementById("statsEnvironment");
+        if (envEl) {
+            // Count world objects
+            let treeCount = 0, fishCount = 0, stoneCount = 0, wheatCount = 0;
+            let shrubCount = 0, cactusCount = 0, reedCount = 0, palmCount = 0, pineCount = 0;
+            let fenceCount = 0, townHallCount = 0;
+            // Sample every 3rd tile for performance on huge maps
+            for (let x = 0; x < X_TILES; x += 3) {
+                for (let y = 0; y < Y_TILES; y += 3) {
+                    let tile = world[x][y];
+                    for (let obj of tile.worldObjects) {
+                        if (obj.name === "tree")
+                            treeCount++;
+                        else if (obj.name === "pine_tree")
+                            pineCount++;
+                        else if (obj.name === "palm_tree")
+                            palmCount++;
+                        else if (obj.name === "fish")
+                            fishCount++;
+                        else if (obj.name === "stone")
+                            stoneCount++;
+                        else if (obj.name === "wheat")
+                            wheatCount++;
+                        else if (obj.name === "shrub")
+                            shrubCount++;
+                        else if (obj.name === "cactus")
+                            cactusCount++;
+                        else if (obj.name === "reed")
+                            reedCount++;
+                        else if (obj.name === "fence")
+                            fenceCount++;
+                        else if (obj.name === "town_hall")
+                            townHallCount++;
+                    }
+                }
+            }
+            // Scale sampled counts back (approximate)
+            let sampleScale = 9; // 3x3 sampling
+            treeCount *= sampleScale;
+            fishCount *= sampleScale;
+            stoneCount *= sampleScale;
+            wheatCount *= sampleScale;
+            shrubCount *= sampleScale;
+            cactusCount *= sampleScale;
+            reedCount *= sampleScale;
+            palmCount *= sampleScale;
+            pineCount *= sampleScale;
+            envEl.innerHTML = `
+                ${statLine("World Size", `${X_TILES} × ${Y_TILES}`, "accent")}
+                ${statLine("Total Tiles", (X_TILES * Y_TILES).toLocaleString(), "")}
+                <hr class="stat-divider">
+                <div class="stat-section-label">Natural Resources (est.)</div>
+                <div class="stat-grid">
+                    ${statLine("🌳 Trees", `~${treeCount}`, "")}
+                    ${statLine("🌲 Pine", `~${pineCount}`, "")}
+                    ${statLine("🌴 Palm", `~${palmCount}`, "")}
+                    ${statLine("🐟 Fish", `~${fishCount}`, "")}
+                    ${statLine("🪨 Stone", `~${stoneCount}`, "")}
+                    ${statLine("🌾 Wheat", `~${wheatCount}`, "")}
+                    ${statLine("🌿 Shrub", `~${shrubCount}`, "")}
+                    ${statLine("🌵 Cactus", `~${cactusCount}`, "")}
+                </div>
+            `;
+        }
+        // 8. Total Stockpile Resources
+        const resEl = document.getElementById("statsResources");
+        if (resEl) {
+            let totalRes = 0;
+            for (let key in globalStockpile)
+                totalRes += globalStockpile[key];
+            const resourceEmoji = {
+                wood: "🪵", fish: "🐟", stone: "🪨", wheat: "🌾", apple: "🍎", berry: "🫐", gold: "💰"
+            };
+            let maxRes = Math.max(...Object.values(globalStockpile), 1);
+            let html = `
+                <div class="stat-big">
+                    <div class="stat-big-number" style="font-size: 26px;">${totalRes}</div>
+                    <div class="stat-big-label">Total Resources (All Villages)</div>
+                </div>
+                <hr class="stat-divider">
+            `;
+            for (let key in globalStockpile) {
+                let emoji = resourceEmoji[key] || "📦";
+                let value = globalStockpile[key];
+                let colorClass = key === "gold" ? "gold" : "green";
+                html += meterBar(`${emoji} ${key.charAt(0).toUpperCase() + key.slice(1)}`, value, maxRes, colorClass);
+            }
+            resEl.innerHTML = html;
+        }
+        // 9. Carried Inventory
+        const invEl = document.getElementById("statsInventory");
+        if (invEl) {
+            let sortedItems = Object.entries(carriedItems).sort((a, b) => b[1] - a[1]);
+            let totalCarried = 0;
+            for (let [, count] of sortedItems)
+                totalCarried += count;
+            let html = `
+                <div class="stat-big">
+                    <div class="stat-big-number" style="font-size: 26px;">${totalCarried}</div>
+                    <div class="stat-big-label">Total Items Carried</div>
+                </div>
+                <hr class="stat-divider">
+            `;
+            if (sortedItems.length === 0) {
+                html += `<span class="stat-label">No items being carried</span>`;
+            }
+            else {
+                for (let [name, count] of sortedItems) {
+                    html += statLine(name, count, "");
+                }
+            }
+            invEl.innerHTML = html;
+        }
+        // Update tick counter
+        const tickEl = document.getElementById("statsTickCounter");
+        //@ts-ignore
+        if (tickEl)
+            tickEl.innerText = `Tick: ${typeof ticks !== "undefined" ? ticks : 0}`;
+    }
 }
 TestTools.activeMode = "inspect";
 TestTools.selectedEntity = "woodcutter"; // Spawning selection type
 // Inspection state
 TestTools.selectedTile = null;
 TestTools.inspectedEntity = null;
+// ========================================
+// World Statistics Popup
+// ========================================
+TestTools.statsRefreshInterval = null;
+TestTools.isStatsOpen = false;
+TestTools.popGraphMode = false; // false = bar chart, true = graph
+// Population history for time-series graph
+TestTools.popHistory = { ticks: [], woodcutter: [], fisherman: [], miner: [], farmer: [], sheep: [], cow: [], wolf: [], total: [] };
+TestTools.POP_HISTORY_MAX = 600; // Max data points (~30,000 ticks at 50-tick interval)
+TestTools.POP_SAMPLE_INTERVAL = 50; // Record every N ticks
+TestTools.lastPopSampleTick = -1;
 // Automatically initialize once DOM is loaded
 window.addEventListener("DOMContentLoaded", () => {
     TestTools.init();
+    // World Stats button
+    const statsBtn = document.getElementById("worldStatsBtn");
+    const statsCloseBtn = document.getElementById("statsCloseBtn");
+    const statsOverlay = document.getElementById("worldStatsOverlay");
+    if (statsBtn) {
+        statsBtn.addEventListener("click", () => {
+            TestTools.openWorldStats();
+        });
+    }
+    if (statsCloseBtn) {
+        statsCloseBtn.addEventListener("click", () => {
+            TestTools.closeWorldStats();
+        });
+    }
+    // Close on clicking backdrop
+    if (statsOverlay) {
+        statsOverlay.addEventListener("click", (e) => {
+            if (e.target === statsOverlay) {
+                TestTools.closeWorldStats();
+            }
+        });
+    }
+    // Close with Escape key
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && TestTools.isStatsOpen) {
+            TestTools.closeWorldStats();
+        }
+    });
 });

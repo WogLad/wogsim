@@ -25,7 +25,7 @@ const INVENTORY_MAX_CAPACITY = 20;
 // Village settings and spawn configuration
 var townHallPositions = [];
 var HUMAN_SPAWN_INTERVAL = 100; // Tweak this value to change runtime spawn rate (lower = faster spawn)
-var MAX_ENTITIES_LIMIT = 150; // Maximum number of concurrent entities in the world to maintain high performance
+var MAX_ENTITIES_LIMIT = 500; // Maximum number of concurrent entities in the world to maintain high performance
 canvas.height = CANVAS_HEIGHT;
 canvas.width = CANVAS_WIDTH;
 window.addEventListener("resize", () => {
@@ -910,6 +910,11 @@ function mainProcess() {
         ticks++;
         if (ticks == 1000000000) {
             ticks = 0;
+        }
+        //@ts-ignore
+        if (typeof TestTools !== "undefined") {
+            //@ts-ignore
+            TestTools.recordPopulationSample();
         }
         // Rescue Spawner to prevent total extinction (runs every 300 ticks)
         if (ticks % 300 === 0) {
