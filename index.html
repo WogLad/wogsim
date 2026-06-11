@@ -24,6 +24,14 @@
         </div>
         <div class="panel-content">
             <div class="control-group">
+                <label>Game State</label>
+                <div class="btn-group">
+                    <button id="saveGameBtn" class="mode-btn" style="background: rgba(0, 255, 204, 0.1); border-color: #00ffcc; color: #00ffcc;">💾 Save Game</button>
+                    <button id="loadGameBtn" class="mode-btn" style="background: rgba(255, 204, 0, 0.1); border-color: #ffcc00; color: #ffcc00;">📂 Load Game</button>
+                    <input type="file" id="loadGameInput" accept=".json" style="display: none;">
+                </div>
+            </div>
+            <div class="control-group">
                 <label>Tool Mode</label>
                 <div class="btn-group">
                     <button id="modeInspectBtn" class="mode-btn active">Inspect</button>
@@ -194,6 +202,7 @@
     <script defer src="js/Entities/Wolf.js"></script>
 
     <!-- Main Final Scripts -->
+    <script defer src="js/SaveManager.js"></script>
     <script defer src="js/main.js"></script>
     <script defer src="js/TestTools.js"></script>
     <script defer src="js/UI.js"></script>

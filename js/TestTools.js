@@ -1433,4 +1433,36 @@ window.addEventListener("DOMContentLoaded", () => {
             TestTools.closeWorldStats();
         }
     });
+    // Save & Load UI integration
+    const saveGameBtn = document.getElementById("saveGameBtn");
+    const loadGameBtn = document.getElementById("loadGameBtn");
+    const loadGameInput = document.getElementById("loadGameInput");
+    if (saveGameBtn) {
+        saveGameBtn.addEventListener("click", () => {
+            //@ts-ignore
+            if (typeof SaveManager !== "undefined")
+                SaveManager.saveGame();
+        });
+    }
+    if (loadGameBtn && loadGameInput) {
+        loadGameBtn.addEventListener("click", () => {
+            loadGameInput.click();
+        });
+        loadGameInput.addEventListener("change", (e) => {
+            const target = e.target;
+            if (target.files && target.files.length > 0) {
+                const file = target.files[0];
+                const reader = new FileReader();
+                reader.onload = (re) => {
+                    if (re.target && typeof re.target.result === "string") {
+                        //@ts-ignore
+                        if (typeof SaveManager !== "undefined")
+                            SaveManager.loadGame(re.target.result);
+                    }
+                };
+                reader.readAsText(file);
+                target.value = ""; // Reset to allow re-selection
+            }
+        });
+    }
 });
