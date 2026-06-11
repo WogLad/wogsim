@@ -29,7 +29,7 @@ const INVENTORY_MAX_CAPACITY: number = 20;
 // Village settings and spawn configuration
 var townHallPositions: Vector2[] = [];
 var HUMAN_SPAWN_INTERVAL: number = 100; // Tweak this value to change runtime spawn rate (lower = faster spawn)
-var MAX_ENTITIES_LIMIT: number = 500; // Maximum number of concurrent entities in the world to maintain high performance
+var MAX_ENTITIES_LIMIT: number = 5000; // Maximum number of concurrent entities in the world to maintain high performance
 
 canvas.height = CANVAS_HEIGHT;
 canvas.width = CANVAS_WIDTH;
@@ -55,7 +55,23 @@ var inspectedHouseOwnerId: string | null = null;
 
 var entities: EntityData[] = [];
 var world: WorldTile[][] = [];
-var aStarGrid: any;
+var wasmExports: any = null;
+var wasmMemory: WebAssembly.Memory | null = null;
+
+function findWasmPath(startX: number, startY: number, endX: number, endY: number): { x: number, y: number }[] {
+    if (!wasmExports || !wasmMemory) return [];
+    var success = wasmExports.findPath(startX, startY, endX, endY);
+    if (!success) return [];
+    var length = wasmExports.getResultPathLength();
+    var ptr = wasmExports.getResultPathPointer();
+    var int32Array = new Int32Array(wasmMemory.buffer, ptr, length * 2);
+    var path: { x: number, y: number }[] = [];
+    for (var i = 0; i < length; i++) {
+        path.push({ x: int32Array[i * 2], y: int32Array[i * 2 + 1] });
+    }
+    return path;
+}
+
 var sprites: Map<string, HTMLImageElement> = new Map<string, HTMLImageElement>();
 
 var offscreenCanvas: HTMLCanvasElement = document.createElement("canvas");
@@ -124,19 +140,64 @@ function init(): void {
         }
     }
 
-    generateVillages(5); // Generate 5 village settlements across the map
-
-    // Set up the A* Grid
-    var gridInput: number[][] = [];
+    // Sync the A* Grid to WASM (Pre-village)
     for (var x = 0; x < X_TILES; x++) {
-        var inputRow: number[] = [];
         for (var y = 0; y < Y_TILES; y++) {
-            inputRow.push(Number(world[x][y].canBeTraversed()));
+            wasmExports.setGridWeight(x, y, Number(world[x][y].canBeTraversed()));
         }
-        gridInput.push(inputRow);
     }
-    //@ts-ignore - as the Graph class is part of the JS code, not the TS code
-    aStarGrid = new Graph(gridInput, { diagonal: true });
+
+    // Generate 50 village settlements across the map using WASM
+    wasmExports.generateVillagesWasm(5);
+    var genSize = wasmExports.getGenBufferSize();
+    var genPtr = wasmExports.getGenBufferPointer();
+    var genArray = new Int32Array(wasmMemory!.buffer, genPtr, genSize * 3);
+
+    for (var i = 0; i < genSize; i++) {
+        var cmd = genArray[i * 3];
+        var gx = genArray[i * 3 + 1];
+        var gy = genArray[i * 3 + 2];
+        var tile = world[gx][gy];
+
+        if (cmd === 0) { // TownHall
+            townHallPositions.push(Vector2(gx, gy));
+            tile.worldObjects = [new WorldObject("town_hall")];
+        } else if (cmd === 1) { // Campfire
+            tile.worldObjects = [new WorldObject("campfire")];
+        } else if (cmd === 2) { // Ground
+            tile.type = TileType.GROUND;
+            tile.worldObjects = tile.worldObjects.filter(o => o.name === "town_hall" || o.name === "campfire" || o.name === "house");
+        } else if (cmd === 3) { // Fence
+            tile.worldObjects = [new WorldObject("fence")];
+            tile.items = [];
+        } else if (cmd >= 4 && cmd <= 9) { // Entities
+            tile.entities = [];
+            tile.worldObjects = [];
+            let ent: any;
+            //@ts-ignore
+            if (cmd === 4) ent = new Sheep();
+            //@ts-ignore
+            else if (cmd === 5) ent = new Cow();
+            else if (cmd === 6) ent = new Woodcutter();
+            else if (cmd === 7) ent = new Fisherman();
+            //@ts-ignore
+            else if (cmd === 8) ent = new Miner();
+            //@ts-ignore
+            else if (cmd === 9) ent = new Farmer();
+
+            if (ent) {
+                tile.addEntity(ent);
+                entities.push({ entity: ent, pos: Vector2(gx, gy) });
+            }
+        }
+    }
+
+    // Sync the A* Grid to WASM again (Post-village)
+    for (var x = 0; x < X_TILES; x++) {
+        for (var y = 0; y < Y_TILES; y++) {
+            wasmExports.setGridWeight(x, y, Number(world[x][y].canBeTraversed()));
+        }
+    }
 
     // Load in all the images and trigger offscreen redraw when loaded
     sprites.set("tree", getImgElement("img/tree.png", () => {
@@ -147,139 +208,7 @@ function init(): void {
     drawEntireWorldToOffscreen();
 }
 
-function generateVillages(count: number): void {
-    let generated = 0;
-    let attempts = 0;
 
-    while (generated < count && attempts < 200) {
-        attempts++;
-        let cx = Math.floor(15 + Math.random() * (X_TILES - 30));
-        let cy = Math.floor(15 + Math.random() * (Y_TILES - 30));
-
-        let centerTile = world[cx][cy];
-        if (centerTile.type === TileType.WATER || centerTile.type === TileType.DARK_WATER || centerTile.type === TileType.SAND || centerTile.type === TileType.SNOW) {
-            continue;
-        }
-
-        let tooClose = false;
-        for (var x = cx - 25; x <= cx + 25; x++) {
-            for (var y = cy - 25; y <= cy + 25; y++) {
-                if (world[x] && world[x][y]) {
-                    if (world[x][y].worldObjects.some(o => o.name === "town_hall" || o.name === "storage_pile")) {
-                        tooClose = true;
-                        break;
-                    }
-                }
-            }
-            if (tooClose) break;
-        }
-        if (tooClose) continue;
-
-        centerTile.type = TileType.GROUND;
-        centerTile.worldObjects = [new WorldObject("town_hall")];
-        centerTile.items = [];
-        townHallPositions.push(Vector2(cx, cy));
-
-        let campfireTile = world[cx + 3] ? world[cx + 3][cy] : null;
-        if (campfireTile) {
-            campfireTile.type = TileType.GROUND;
-            campfireTile.worldObjects = [new WorldObject("campfire")];
-            campfireTile.items = [];
-        }
-
-        // Initial house generation removed. Houses will be built by villagers.
-
-        for (let r = -4; r <= 4; r++) {
-            let tx = cx + r;
-            let ty = cy;
-            if (world[tx] && world[tx][ty] && world[tx][ty].type !== TileType.WATER && world[tx][ty].type !== TileType.DARK_WATER) {
-                world[tx][ty].type = TileType.GROUND;
-                world[tx][ty].worldObjects = world[tx][ty].worldObjects.filter(o => o.name === "town_hall" || o.name === "campfire" || o.name === "house");
-            }
-            tx = cx;
-            ty = cy + r;
-            if (world[tx] && world[tx][ty] && world[tx][ty].type !== TileType.WATER && world[tx][ty].type !== TileType.DARK_WATER) {
-                world[tx][ty].type = TileType.GROUND;
-                world[tx][ty].worldObjects = world[tx][ty].worldObjects.filter(o => o.name === "town_hall" || o.name === "campfire" || o.name === "house");
-            }
-        }
-
-        let px = cx + 2;
-        let py = cy + 2;
-        for (let fx = px; fx <= px + 4; fx++) {
-            for (let fy = py; fy <= py + 4; fy++) {
-                if (world[fx] && world[fx][fy]) {
-                    if (fx === px || fx === px + 4 || fy === py || fy === py + 4) {
-                        if (!(fx === cx && fy === cy)) {
-                            world[fx][fy].worldObjects = [new WorldObject("fence")];
-                            world[fx][fy].items = [];
-                        }
-                    }
-                }
-            }
-        }
-
-        let penInnerPos = [
-            { x: px + 1, y: py + 1 },
-            { x: px + 2, y: py + 1 },
-            { x: px + 1, y: py + 2 },
-            { x: px + 2, y: py + 2 }
-        ];
-        for (let i = 0; i < penInnerPos.length; i++) {
-            let pos = penInnerPos[i];
-            if (world[pos.x] && world[pos.x][pos.y]) {
-                let tile = world[pos.x][pos.y];
-                tile.entities = [];
-                tile.worldObjects = [];
-
-                let animal: Entity;
-                if (i < 2) {
-                    //@ts-ignore
-                    animal = new Sheep();
-                } else {
-                    //@ts-ignore
-                    animal = new Cow();
-                }
-                tile.addEntity(animal);
-                entities.push({ entity: animal, pos: Vector2(pos.x, pos.y) });
-            }
-        }
-
-        let villagerSpawnOffsets = [
-            { x: -1, y: -1 }, { x: 1, y: -1 }, { x: -1, y: 1 }, { x: 1, y: 1 },
-            { x: -2, y: -2 }, { x: 2, y: -2 }, { x: -2, y: 2 }, { x: -2, y: -1 },
-            { x: -2, y: 1 }, { x: -1, y: -2 }, { x: 1, y: -2 }, { x: -2, y: 0 },
-            { x: -1, y: 0 }, { x: 0, y: -1 }, { x: 0, y: 1 }, { x: 0, y: -2 }
-        ];
-        for (let i = 0; i < villagerSpawnOffsets.length; i++) {
-            let offset = villagerSpawnOffsets[i];
-            let vx = cx + offset.x;
-            let vy = cy + offset.y;
-            if (world[vx] && world[vx][vy]) {
-                let tile = world[vx][vy];
-                tile.entities = [];
-                tile.worldObjects = [];
-
-                let villager: Human;
-                if (i % 4 === 0) {
-                    villager = new Woodcutter();
-                } else if (i % 4 === 1) {
-                    villager = new Fisherman();
-                } else if (i % 4 === 2) {
-                    //@ts-ignore
-                    villager = new Miner();
-                } else {
-                    //@ts-ignore
-                    villager = new Farmer();
-                }
-                tile.addEntity(villager);
-                entities.push({ entity: villager, pos: Vector2(vx, vy) });
-            }
-        }
-
-        generated++;
-    }
-}
 
 function drawProceduralObject(ctx: CanvasRenderingContext2D, name: string, x: number, y: number, size: number): void {
     ctx.save();
@@ -569,7 +498,7 @@ function drawEntireWorldToOffscreen(): void {
     }
 }
 
-init();
+
 
 var DEBUG_DRAW = false;
 
@@ -1062,7 +991,39 @@ function mainProcess(): void {
 
     requestAnimationFrame(mainProcess);
 }
-requestAnimationFrame(mainProcess);
+declare var wasmBase64: string;
+
+async function loadWasm() {
+    let buffer: ArrayBuffer;
+    try {
+        if (typeof wasmBase64 !== "undefined") {
+            const binaryString = atob(wasmBase64);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            buffer = bytes.buffer;
+        } else {
+            const response = await fetch('build/release.wasm');
+            buffer = await response.arrayBuffer();
+        }
+    } catch (e) {
+        console.error("Failed to load WASM:", e);
+        return;
+    }
+
+    const module = await WebAssembly.instantiate(buffer, {
+        env: {
+            abort: () => console.log("Abort called from wasm"),
+            seed: () => Date.now() * Math.random()
+        }
+    });
+    wasmExports = module.instance.exports;
+    wasmMemory = wasmExports.memory;
+    init();
+    requestAnimationFrame(mainProcess);
+}
+loadWasm();
 
 function spawnWildAnimal(type: string): void {
     let spawned = false;

@@ -112,7 +112,7 @@ class Entity {
 
     moveTo(startPos: Vector2, endPos: Vector2) {
         //@ts-ignore
-        this.moveQueue = astar.search(aStarGrid, aStarGrid.grid[startPos.x][startPos.y], aStarGrid.grid[endPos.x][endPos.y]);
+        this.moveQueue = findWasmPath(startPos.x, startPos.y, endPos.x, endPos.y);
     }
 
     getRandomPos(currentX: number, currentY: number, radius: number = 10): Vector2 {

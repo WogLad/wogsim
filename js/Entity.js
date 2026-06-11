@@ -86,7 +86,7 @@ class Entity {
     }
     moveTo(startPos, endPos) {
         //@ts-ignore
-        this.moveQueue = astar.search(aStarGrid, aStarGrid.grid[startPos.x][startPos.y], aStarGrid.grid[endPos.x][endPos.y]);
+        this.moveQueue = findWasmPath(startPos.x, startPos.y, endPos.x, endPos.y);
     }
     getRandomPos(currentX, currentY, radius = 10) {
         for (let attempt = 0; attempt < 30; attempt++) {
