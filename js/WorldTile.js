@@ -40,7 +40,9 @@ class WorldTile {
         this.items = [];
         this.worldObjects = [];
         var type = this.type;
-        var rand = Math.random();
+        //@ts-ignore
+        var multiplier = typeof RESOURCE_SPAWN_MULTIPLIER !== "undefined" ? RESOURCE_SPAWN_MULTIPLIER : 1.0;
+        var rand = Math.random() / (multiplier > 0 ? multiplier : 0.000001);
         if (type === TileType.DARK_GRASS) {
             // Forest
             if (rand < 0.40) {

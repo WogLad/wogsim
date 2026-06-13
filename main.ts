@@ -31,7 +31,7 @@ const INVENTORY_MAX_CAPACITY: number = 20;
 var townHallPositions: Vector2[] = [];
 var HUMAN_SPAWN_INTERVAL: number = 100; // Tweak this value to change runtime spawn rate (lower = faster spawn)
 var MAX_ENTITIES_LIMIT: number = 5000; // Maximum number of concurrent entities in the world to maintain high performance
-
+var RESOURCE_SPAWN_MULTIPLIER: number = 1.0; // Multiplier for natural resource spawning density
 canvas.height = CANVAS_HEIGHT;
 canvas.width = CANVAS_WIDTH;
 

@@ -12,6 +12,13 @@ class TestTools {
         const entitySheep = document.getElementById("entitySheepBtn");
         const entityCow = document.getElementById("entityCowBtn");
         const entityWolf = document.getElementById("entityWolfBtn");
+        const resourceTree = document.getElementById("resourceTreeBtn");
+        const resourcePine = document.getElementById("resourcePineBtn");
+        const resourcePalm = document.getElementById("resourcePalmBtn");
+        const resourceStone = document.getElementById("resourceStoneBtn");
+        const resourceWheat = document.getElementById("resourceWheatBtn");
+        const resourceShrub = document.getElementById("resourceShrubBtn");
+        const resourceCactus = document.getElementById("resourceCactusBtn");
         const togglePanelBtn = document.getElementById("togglePanelBtn");
         const panel = document.getElementById("testToolsPanel");
         if (togglePanelBtn && panel) {
@@ -47,7 +54,10 @@ class TestTools {
         modeInspect === null || modeInspect === void 0 ? void 0 : modeInspect.addEventListener("click", () => setMode("inspect"));
         modeSpawn === null || modeSpawn === void 0 ? void 0 : modeSpawn.addEventListener("click", () => setMode("spawn"));
         modeDelete === null || modeDelete === void 0 ? void 0 : modeDelete.addEventListener("click", () => setMode("delete"));
-        const entityButtons = [entityWoodcutter, entityFisherman, entityMiner, entityFarmer, entitySheep, entityCow, entityWolf];
+        const entityButtons = [
+            entityWoodcutter, entityFisherman, entityMiner, entityFarmer, entitySheep, entityCow, entityWolf,
+            resourceTree, resourcePine, resourcePalm, resourceStone, resourceWheat, resourceShrub, resourceCactus
+        ];
         const selectEntity = (type, activeBtn) => {
             this.selectedEntity = type;
             entityButtons.forEach(btn => btn === null || btn === void 0 ? void 0 : btn.classList.remove("active"));
@@ -61,6 +71,27 @@ class TestTools {
         entitySheep === null || entitySheep === void 0 ? void 0 : entitySheep.addEventListener("click", () => selectEntity("sheep", entitySheep));
         entityCow === null || entityCow === void 0 ? void 0 : entityCow.addEventListener("click", () => selectEntity("cow", entityCow));
         entityWolf === null || entityWolf === void 0 ? void 0 : entityWolf.addEventListener("click", () => selectEntity("wolf", entityWolf));
+        resourceTree === null || resourceTree === void 0 ? void 0 : resourceTree.addEventListener("click", () => selectEntity("tree", resourceTree));
+        resourcePine === null || resourcePine === void 0 ? void 0 : resourcePine.addEventListener("click", () => selectEntity("pine_tree", resourcePine));
+        resourcePalm === null || resourcePalm === void 0 ? void 0 : resourcePalm.addEventListener("click", () => selectEntity("palm_tree", resourcePalm));
+        resourceStone === null || resourceStone === void 0 ? void 0 : resourceStone.addEventListener("click", () => selectEntity("stone", resourceStone));
+        resourceWheat === null || resourceWheat === void 0 ? void 0 : resourceWheat.addEventListener("click", () => selectEntity("wheat", resourceWheat));
+        resourceShrub === null || resourceShrub === void 0 ? void 0 : resourceShrub.addEventListener("click", () => selectEntity("shrub", resourceShrub));
+        resourceCactus === null || resourceCactus === void 0 ? void 0 : resourceCactus.addEventListener("click", () => selectEntity("cactus", resourceCactus));
+        // Density Slider
+        const densitySlider = document.getElementById("resourceDensitySlider");
+        const densityValue = document.getElementById("resourceDensityValue");
+        if (densitySlider && densityValue) {
+            densitySlider.addEventListener("input", (e) => {
+                const val = parseFloat(e.target.value);
+                densityValue.innerText = val.toFixed(1) + "x";
+                //@ts-ignore
+                if (typeof RESOURCE_SPAWN_MULTIPLIER !== "undefined") {
+                    //@ts-ignore
+                    RESOURCE_SPAWN_MULTIPLIER = val;
+                }
+            });
+        }
         // Simulation Speed Buttons
         const speed1x = document.getElementById("speed1xBtn");
         const speed2x = document.getElementById("speed2xBtn");
@@ -387,6 +418,15 @@ class TestTools {
                 alert(`Cannot spawn: Tile entity limit (${TILE_ENTITY_LIMIT}) reached!`);
                 return true;
             }
+            const resourceTypes = ["tree", "pine_tree", "palm_tree", "stone", "wheat", "shrub", "cactus"];
+            if (resourceTypes.includes(this.selectedEntity)) {
+                tile.worldObjects.push(new WorldObject(this.selectedEntity));
+                //@ts-ignore
+                if (typeof drawTileToOffscreen === "function")
+                    drawTileToOffscreen(x, y);
+                this.updateStats();
+                return true;
+            }
             let newEntity;
             if (this.selectedEntity === "woodcutter") {
                 newEntity = new Woodcutter();
@@ -410,9 +450,12 @@ class TestTools {
                 //@ts-ignore
                 newEntity = new Cow();
             }
-            else {
+            else if (this.selectedEntity === "wolf") {
                 //@ts-ignore
                 newEntity = new Wolf();
+            }
+            else {
+                return true;
             }
             if (tile.addEntity(newEntity)) {
                 entities.push({ entity: newEntity, pos: Vector2(x, y) });
@@ -438,6 +481,11 @@ class TestTools {
                 }
             }
             tile.entities = [];
+            tile.worldObjects = [];
+            tile.items = [];
+            //@ts-ignore
+            if (typeof drawTileToOffscreen === "function")
+                drawTileToOffscreen(x, y);
             this.updateStats();
             this.selectedTile = tile;
             this.inspectedEntity = null;
@@ -1275,9 +1323,8 @@ class TestTools {
             let treeCount = 0, fishCount = 0, stoneCount = 0, wheatCount = 0;
             let shrubCount = 0, cactusCount = 0, reedCount = 0, palmCount = 0, pineCount = 0;
             let fenceCount = 0, townHallCount = 0;
-            // Sample every 3rd tile for performance on huge maps
-            for (let x = 0; x < X_TILES; x += 3) {
-                for (let y = 0; y < Y_TILES; y += 3) {
+            for (let x = 0; x < X_TILES; x++) {
+                for (let y = 0; y < Y_TILES; y++) {
                     let tile = world[x][y];
                     for (let obj of tile.worldObjects) {
                         if (obj.name === "tree")
@@ -1305,31 +1352,20 @@ class TestTools {
                     }
                 }
             }
-            // Scale sampled counts back (approximate)
-            let sampleScale = 9; // 3x3 sampling
-            treeCount *= sampleScale;
-            fishCount *= sampleScale;
-            stoneCount *= sampleScale;
-            wheatCount *= sampleScale;
-            shrubCount *= sampleScale;
-            cactusCount *= sampleScale;
-            reedCount *= sampleScale;
-            palmCount *= sampleScale;
-            pineCount *= sampleScale;
             envEl.innerHTML = `
                 ${statLine("World Size", `${X_TILES} × ${Y_TILES}`, "accent")}
                 ${statLine("Total Tiles", (X_TILES * Y_TILES).toLocaleString(), "")}
                 <hr class="stat-divider">
-                <div class="stat-section-label">Natural Resources (est.)</div>
+                <div class="stat-section-label">Natural Resources</div>
                 <div class="stat-grid">
-                    ${statLine("🌳 Trees", `~${treeCount}`, "")}
-                    ${statLine("🌲 Pine", `~${pineCount}`, "")}
-                    ${statLine("🌴 Palm", `~${palmCount}`, "")}
-                    ${statLine("🐟 Fish", `~${fishCount}`, "")}
-                    ${statLine("🪨 Stone", `~${stoneCount}`, "")}
-                    ${statLine("🌾 Wheat", `~${wheatCount}`, "")}
-                    ${statLine("🌿 Shrub", `~${shrubCount}`, "")}
-                    ${statLine("🌵 Cactus", `~${cactusCount}`, "")}
+                    ${statLine("🌳 Trees", `${treeCount}`, "")}
+                    ${statLine("🌲 Pine", `${pineCount}`, "")}
+                    ${statLine("🌴 Palm", `${palmCount}`, "")}
+                    ${statLine("🐟 Fish", `${fishCount}`, "")}
+                    ${statLine("🪨 Stone", `${stoneCount}`, "")}
+                    ${statLine("🌾 Wheat", `${wheatCount}`, "")}
+                    ${statLine("🌿 Shrub", `${shrubCount}`, "")}
+                    ${statLine("🌵 Cactus", `${cactusCount}`, "")}
                 </div>
             `;
         }

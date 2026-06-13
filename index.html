@@ -48,17 +48,32 @@
                     <button id="speed10xBtn" class="mode-btn">10x</button>
                 </div>
             </div>
+            <div class="control-group">
+                <label>Resource Spawn Rate</label>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <input type="range" id="resourceDensitySlider" min="0" max="3" step="0.1" value="1" style="flex: 1; accent-color: #00ffcc;">
+                    <span id="resourceDensityValue" style="color: #00ffcc; font-size: 11px; width: 30px;">1.0x</span>
+                </div>
+            </div>
             
             <div id="entitySelectGroup" class="control-group hidden">
-                <label>Select Entity</label>
+                <label>Select Entity / Resource</label>
                 <div class="btn-group" style="flex-wrap: wrap; gap: 4px;">
-                    <button id="entityWoodcutterBtn" class="entity-btn active" style="flex: 1 1 30%;">Woodcutter (W)</button>
-                    <button id="entityFishermanBtn" class="entity-btn" style="flex: 1 1 30%;">Fisherman (F)</button>
-                    <button id="entityMinerBtn" class="entity-btn" style="flex: 1 1 30%;">Miner (M)</button>
-                    <button id="entityFarmerBtn" class="entity-btn" style="flex: 1 1 30%;">Farmer (P)</button>
-                    <button id="entitySheepBtn" class="entity-btn" style="flex: 1 1 30%;">Sheep (S)</button>
-                    <button id="entityCowBtn" class="entity-btn" style="flex: 1 1 30%;">Cow (C)</button>
-                    <button id="entityWolfBtn" class="entity-btn" style="flex: 1 1 30%;">Wolf (X)</button>
+                    <button id="entityWoodcutterBtn" class="entity-btn active" style="flex: 1 1 30%;">Woodcutter</button>
+                    <button id="entityFishermanBtn" class="entity-btn" style="flex: 1 1 30%;">Fisherman</button>
+                    <button id="entityMinerBtn" class="entity-btn" style="flex: 1 1 30%;">Miner</button>
+                    <button id="entityFarmerBtn" class="entity-btn" style="flex: 1 1 30%;">Farmer</button>
+                    <button id="entitySheepBtn" class="entity-btn" style="flex: 1 1 30%;">Sheep</button>
+                    <button id="entityCowBtn" class="entity-btn" style="flex: 1 1 30%;">Cow</button>
+                    <button id="entityWolfBtn" class="entity-btn" style="flex: 1 1 30%;">Wolf</button>
+                    <div style="width: 100%; height: 1px; background: rgba(255,255,255,0.1); margin: 4px 0;"></div>
+                    <button id="resourceTreeBtn" class="entity-btn" style="flex: 1 1 30%;">Tree</button>
+                    <button id="resourcePineBtn" class="entity-btn" style="flex: 1 1 30%;">Pine Tree</button>
+                    <button id="resourcePalmBtn" class="entity-btn" style="flex: 1 1 30%;">Palm Tree</button>
+                    <button id="resourceStoneBtn" class="entity-btn" style="flex: 1 1 30%;">Stone</button>
+                    <button id="resourceWheatBtn" class="entity-btn" style="flex: 1 1 30%;">Wheat</button>
+                    <button id="resourceShrubBtn" class="entity-btn" style="flex: 1 1 30%;">Shrub</button>
+                    <button id="resourceCactusBtn" class="entity-btn" style="flex: 1 1 30%;">Cactus</button>
                 </div>
             </div>
 
