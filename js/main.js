@@ -28,7 +28,7 @@ var activeStockpileName = "📦 Select a Town Hall to view Stockpile";
 var STORAGE_POS = Vector2(Math.floor(X_TILES / 2), Math.floor(Y_TILES / 2));
 var PAUSED = false;
 var SIMULATION_SPEED = 1;
-const TILE_ENTITY_LIMIT = 10;
+const TILE_ENTITY_LIMIT = 100;
 const TILE_ITEM_LIMIT = 10;
 var MOVEMENT_DELAY = 15;
 const INVENTORY_MAX_CAPACITY = 20;
@@ -614,7 +614,7 @@ function mainProcess() {
                     drawBuckets[color] = [];
                 }
                 drawBuckets[color].push(screenX, screenY);
-                textValDraws.push(worldTile.items.length.toString());
+                textValDraws.push(worldTile.entities.length.toString());
                 textXDraws.push(screenX + (TILE_SIZE / 2));
                 textYDraws.push(screenY + (TILE_SIZE / 1.5));
                 textColorDraws.push("black");
