@@ -42,7 +42,7 @@ class Entity {
 
     eatFood(): boolean {
         var foodIdx = this.inventory.findIndex(entry => 
-            (entry.item.name === "Apple" || entry.item.name === "Fish" || entry.item.name === "Berry") && entry.count > 0
+            (entry.item.name === "Apple" || entry.item.name === "Fish" || entry.item.name === "Berry" || entry.item.name === "Wheat") && entry.count > 0
         );
         if (foodIdx !== -1) {
             var entry = this.inventory[foodIdx];
@@ -50,7 +50,8 @@ class Entity {
             if (entry.count <= 0) {
                 this.inventory.splice(foodIdx, 1);
             }
-            this.hunger = Math.max(0, this.hunger - 30);
+            var hungerReduction = entry.item.goldValue * 10;
+            this.hunger = Math.max(0, this.hunger - hungerReduction);
             return true;
         }
         return false;

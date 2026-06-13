@@ -1,10 +1,10 @@
 const ITEM_GOLD_VALUES: { [key: string]: number } = {
-    "Wood": 1,
+    "Wood": 2,
     "Stone": 2,
     "Berry": 2,
     "Apple": 3,
     "Wheat": 4,
-    "Fish": 5,
+    "Fish": 3,
     "Shell": 1
 };
 

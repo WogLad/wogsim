@@ -66,6 +66,31 @@ class Human extends Entity {
                                             if (bTile.canBeTraversed() && bTile.entities.length < entLimit && bTile.worldObjects.length === 0) {
                                                 let babyGenome = Entity.crossoverAndMutate(this, partner);
                                                 let babyLetter = Math.random() < 0.5 ? this.professionLetter : partner.professionLetter;
+                                                if (Math.random() < 0.20) {
+                                                    let counts = { W: 0, F: 0, M: 0, P: 0 };
+                                                    for (let ent of entities) {
+                                                        if (ent.entity instanceof Human) {
+                                                            let letter = ent.entity.professionLetter;
+                                                            if (letter === "W")
+                                                                counts.W++;
+                                                            else if (letter === "F")
+                                                                counts.F++;
+                                                            else if (letter === "M")
+                                                                counts.M++;
+                                                            else if (letter === "P")
+                                                                counts.P++;
+                                                        }
+                                                    }
+                                                    let minProf = "W";
+                                                    let minVal = Infinity;
+                                                    for (let prof of ["W", "F", "M", "P"]) {
+                                                        if (counts[prof] < minVal) {
+                                                            minVal = counts[prof];
+                                                            minProf = prof;
+                                                        }
+                                                    }
+                                                    babyLetter = minProf;
+                                                }
                                                 let baby;
                                                 if (babyLetter === "W")
                                                     baby = new Woodcutter(babyGenome);
@@ -151,7 +176,8 @@ class Human extends Entity {
                                     sp[f]--;
                                     this.gold -= cost;
                                     sp["gold"] = (sp["gold"] || 0) + cost;
-                                    this.hunger = Math.max(0, this.hunger - 50);
+                                    var hungerReduction = cost * 10;
+                                    this.hunger = Math.max(0, this.hunger - hungerReduction);
                                     break;
                                 }
                             }

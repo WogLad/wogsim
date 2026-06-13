@@ -73,6 +73,25 @@ class TestTools {
         entityCow?.addEventListener("click", () => selectEntity("cow", entityCow));
         entityWolf?.addEventListener("click", () => selectEntity("wolf", entityWolf));
 
+        // Simulation Speed Buttons
+        const speed1x = document.getElementById("speed1xBtn");
+        const speed2x = document.getElementById("speed2xBtn");
+        const speed5x = document.getElementById("speed5xBtn");
+        const speed10x = document.getElementById("speed10xBtn");
+
+        const speedBtns = [speed1x, speed2x, speed5x, speed10x];
+        const setSpeed = (speed: number, activeBtn: HTMLElement | null) => {
+            //@ts-ignore
+            SIMULATION_SPEED = speed;
+            speedBtns.forEach(btn => btn?.classList.remove("active"));
+            activeBtn?.classList.add("active");
+        };
+
+        speed1x?.addEventListener("click", () => setSpeed(1, speed1x));
+        speed2x?.addEventListener("click", () => setSpeed(2, speed2x));
+        speed5x?.addEventListener("click", () => setSpeed(5, speed5x));
+        speed10x?.addEventListener("click", () => setSpeed(10, speed10x));
+
         this.updateStats();
     }
 

@@ -21,7 +21,8 @@ var activeStockpile: { [key: string]: number } | null = null;
 var activeStockpileName: string = "📦 Select a Town Hall to view Stockpile";
 var STORAGE_POS: Vector2 = Vector2(Math.floor(X_TILES / 2), Math.floor(Y_TILES / 2));
 var PAUSED: boolean = false;
-const TILE_ENTITY_LIMIT: number = 2;
+var SIMULATION_SPEED: number = 1;
+const TILE_ENTITY_LIMIT: number = 10;
 const TILE_ITEM_LIMIT: number = 10;
 var MOVEMENT_DELAY: number = 15;
 const INVENTORY_MAX_CAPACITY: number = 20;
@@ -124,12 +125,17 @@ function init(): void {
             var tile: WorldTile = new WorldTile(x, y);
             if (tile.type != TileType.WATER && tile.type != TileType.DARK_WATER) {
                 var spawnRoll = Math.random();
-                if (spawnRoll < 0.0010) { // 0.10% chance to spawn a Sheep
+                if (spawnRoll < 0.0007) { // 0.07% chance to spawn a Sheep
                     //@ts-ignore
                     var s = new Sheep();
                     tile.addEntity(s);
                     entities.push({ entity: s, pos: Vector2(x, y) });
-                } else if (spawnRoll < 0.0013) { // 0.03% chance to spawn a Wolf
+                } else if (spawnRoll < 0.0014) { // 0.07% chance to spawn a Cow
+                    //@ts-ignore
+                    var c = new Cow();
+                    tile.addEntity(c);
+                    entities.push({ entity: c, pos: Vector2(x, y) });
+                } else if (spawnRoll < 0.0017) { // 0.03% chance to spawn a Wolf
                     //@ts-ignore
                     var w = new Wolf();
                     tile.addEntity(w);
@@ -148,7 +154,7 @@ function init(): void {
     }
 
     // Generate 50 village settlements across the map using WASM
-    wasmExports.generateVillagesWasm(50);
+    wasmExports.generateVillagesWasm(10);
     var genSize = wasmExports.getGenBufferSize();
     var genPtr = wasmExports.getGenBufferPointer();
     var genArray = new Int32Array(wasmMemory!.buffer, genPtr, genSize * 3);
@@ -594,61 +600,6 @@ function mainProcess(): void {
 
     if (!PAUSED) {
         updateStockpileUI();
-
-        for (var i = 0; i < entities.length; i++) {
-            var ent = entities[i];
-            var e = ent.entity;
-            var pos = ent.pos;
-
-            // Handle death
-            if (e.health <= 0 || (e.isLiving && e.ticksAlive >= e.maxAge)) {
-                if (e.isLiving && e.ticksAlive >= e.maxAge) {
-                    e.health = 0;
-                    e.stateText = "Dead (Old Age)";
-                }
-                var oldTile = world[pos.x][pos.y];
-                oldTile.removeEntity(oldTile.entities.indexOf(e));
-                entities.splice(i, 1);
-                i--;
-                //@ts-ignore
-                if (typeof TestTools !== "undefined") {
-                    //@ts-ignore
-                    TestTools.updateStats();
-                    //@ts-ignore
-                    if (TestTools.inspectedEntity === e) {
-                        //@ts-ignore
-                        TestTools.inspectedEntity = null;
-                        //@ts-ignore
-                        TestTools.updateInspector();
-                    }
-                }
-                continue;
-            }
-
-            e.process();
-            // Movement handler (Staggered to distribute heavy pathfinding load across speedGene-based frames)
-            var moveDelay = Math.round(15 * (e.genome ? e.genome.speedGene : 1.0));
-            if (e.move != null && (ticks + i) % moveDelay == 0) {
-                var direction: Vector2 = e.move(pos.x, pos.y);
-                if (direction.x != 0 || direction.y != 0) {
-                    var targetX = pos.x + direction.x;
-                    var targetY = pos.y + direction.y;
-                    var targetTile = world[targetX] ? world[targetX][targetY] : undefined;
-                    if (targetTile) {
-                        var moveSuccess: boolean = targetTile.addEntity(e);
-                        if (moveSuccess) {
-                            var oldTile = world[pos.x][pos.y];
-                            oldTile.removeEntity(oldTile.entities.indexOf(e)); // Removes the entity from the tile
-                            pos.x = targetX;
-                            pos.y = targetY;
-                        }
-                    }
-                }
-            }
-            if (e.isLiving) {
-                e.ticksAlive++;
-            }
-        }
     }
 
     // DONE: Draw the entities.
@@ -910,75 +861,154 @@ function mainProcess(): void {
 
     // For the world ticks
     if (!PAUSED) {
-        ticks++;
-        if (ticks == 1000000000) { // TO DO: Handle this properly, there's a better way to do this.
-            ticks = 0;
-        }
+        for (let speedStep = 0; speedStep < SIMULATION_SPEED; speedStep++) {
+            // 1. Update entities
+            for (var i = 0; i < entities.length; i++) {
+                var ent = entities[i];
+                var e = ent.entity;
+                var pos = ent.pos;
 
-        //@ts-ignore
-        if (typeof TestTools !== "undefined") {
+                // Handle death
+                if (e.health <= 0 || (e.isLiving && e.ticksAlive >= e.maxAge)) {
+                    if (e.isLiving && e.ticksAlive >= e.maxAge) {
+                        e.health = 0;
+                        e.stateText = "Dead (Old Age)";
+                    }
+                    var oldTile = world[pos.x][pos.y];
+                    oldTile.removeEntity(oldTile.entities.indexOf(e));
+                    entities.splice(i, 1);
+                    i--;
+                    //@ts-ignore
+                    if (typeof TestTools !== "undefined") {
+                        //@ts-ignore
+                        TestTools.updateStats();
+                        //@ts-ignore
+                        if (TestTools.inspectedEntity === e) {
+                            //@ts-ignore
+                            TestTools.inspectedEntity = null;
+                            //@ts-ignore
+                            TestTools.updateInspector();
+                        }
+                    }
+                    continue;
+                }
+
+                e.process();
+                // Movement handler (Staggered to distribute heavy pathfinding load across speedGene-based frames)
+                var moveDelay = Math.round(15 * (e.genome ? e.genome.speedGene : 1.0));
+                if (e.move != null && (ticks + i) % moveDelay == 0) {
+                    var direction: Vector2 = e.move(pos.x, pos.y);
+                    if (direction.x != 0 || direction.y != 0) {
+                        var targetX = pos.x + direction.x;
+                        var targetY = pos.y + direction.y;
+                        var targetTile = world[targetX] ? world[targetX][targetY] : undefined;
+                        if (targetTile) {
+                            var moveSuccess: boolean = targetTile.addEntity(e);
+                            if (moveSuccess) {
+                                var oldTile = world[pos.x][pos.y];
+                                oldTile.removeEntity(oldTile.entities.indexOf(e)); // Removes the entity from the tile
+                                pos.x = targetX;
+                                pos.y = targetY;
+                            }
+                        }
+                    }
+                }
+                if (e.isLiving) {
+                    e.ticksAlive++;
+                }
+            }
+
+            // 2. World ticks increment and spawner checks
+            ticks++;
+            if (ticks == 1000000000) { // TO DO: Handle this properly, there's a better way to do this.
+                ticks = 0;
+            }
+
             //@ts-ignore
-            TestTools.recordPopulationSample();
-        }
+            if (typeof TestTools !== "undefined") {
+                //@ts-ignore
+                TestTools.recordPopulationSample();
+            }
 
-        // Rescue Spawner to prevent total extinction (runs every 300 ticks)
-        if (ticks % 300 === 0) {
-            // 1. Human Village Extinction Rescue
-            for (let thPos of townHallPositions) {
-                let villageHumans = entities.filter(d => d.entity instanceof Human &&
-                    Math.max(Math.abs(d.pos.x - thPos.x), Math.abs(d.pos.y - thPos.y)) <= 45
-                );
+            // Rescue Spawner to prevent total extinction (runs every 300 ticks)
+            if (ticks % 300 === 0) {
+                // 1. Human Village Extinction Rescue
+                for (let thPos of townHallPositions) {
+                    let villageHumans = entities.filter(d => d.entity instanceof Human &&
+                        Math.max(Math.abs(d.pos.x - thPos.x), Math.abs(d.pos.y - thPos.y)) <= 45
+                    );
 
-                if (villageHumans.length < 2 && entities.length < MAX_ENTITIES_LIMIT) {
-                    let spawned = false;
-                    for (let dx = -2; dx <= 2 && !spawned; dx++) {
-                        for (let dy = -2; dy <= 2 && !spawned; dy++) {
-                            if (dx === 0 && dy === 0) continue;
-                            let vx = thPos.x + dx;
-                            let vy = thPos.y + dy;
-                            if (world[vx] && world[vx][vy]) {
-                                let tile = world[vx][vy];
-                                if (tile.canBeTraversed() && tile.entities.length < TILE_ENTITY_LIMIT && tile.worldObjects.length === 0) {
-                                    let roll = Math.floor(Math.random() * 4);
-                                    let villager: Human;
-                                    if (roll === 0) villager = new Woodcutter();
-                                    else if (roll === 1) villager = new Fisherman();
-                                    else if (roll === 2) {
-                                        //@ts-ignore
-                                        villager = new Miner();
-                                    } else {
-                                        //@ts-ignore
-                                        villager = new Farmer();
-                                    }
-                                    tile.addEntity(villager);
-                                    entities.push({ entity: villager, pos: Vector2(vx, vy) });
-                                    spawned = true;
+                    if (villageHumans.length < 2 && entities.length < MAX_ENTITIES_LIMIT) {
+                        let spawned = false;
+                        for (let dx = -2; dx <= 2 && !spawned; dx++) {
+                            for (let dy = -2; dy <= 2 && !spawned; dy++) {
+                                if (dx === 0 && dy === 0) continue;
+                                let vx = thPos.x + dx;
+                                let vy = thPos.y + dy;
+                                if (world[vx] && world[vx][vy]) {
+                                    let tile = world[vx][vy];
+                                    if (tile.canBeTraversed() && tile.entities.length < TILE_ENTITY_LIMIT && tile.worldObjects.length === 0) {
+                                        let roll = Math.floor(Math.random() * 4);
+                                        let villager: Human;
+                                        if (roll === 0) villager = new Woodcutter();
+                                        else if (roll === 1) villager = new Fisherman();
+                                        else if (roll === 2) {
+                                            //@ts-ignore
+                                            villager = new Miner();
+                                        } else {
+                                            //@ts-ignore
+                                            villager = new Farmer();
+                                        }
+                                        tile.addEntity(villager);
+                                        entities.push({ entity: villager, pos: Vector2(vx, vy) });
+                                        spawned = true;
 
-                                    //@ts-ignore
-                                    if (typeof TestTools !== "undefined") {
                                         //@ts-ignore
-                                        TestTools.updateStats();
+                                        if (typeof TestTools !== "undefined") {
+                                            //@ts-ignore
+                                            TestTools.updateStats();
+                                        }
                                     }
                                 }
                             }
                         }
                     }
                 }
+
+                // 2. Wild Animals Extinction Rescue
+                let sheepCount = entities.filter(d => d.entity.constructor.name === "Sheep").length;
+                let cowCount = entities.filter(d => d.entity.constructor.name === "Cow").length;
+                let wolfCount = entities.filter(d => d.entity.constructor.name === "Wolf").length;
+
+                if (sheepCount < 15 && entities.length < MAX_ENTITIES_LIMIT) {
+                    spawnWildAnimalPair("Sheep");
+                }
+                if (cowCount < 15 && entities.length < MAX_ENTITIES_LIMIT) {
+                    spawnWildAnimalPair("Cow");
+                }
+                if (wolfCount < 8 && entities.length < MAX_ENTITIES_LIMIT) {
+                    spawnWildAnimalPair("Wolf");
+                }
             }
 
-            // 2. Wild Animals Extinction Rescue
-            let sheepCount = entities.filter(d => d.entity.constructor.name === "Sheep").length;
-            let cowCount = entities.filter(d => d.entity.constructor.name === "Cow").length;
-            let wolfCount = entities.filter(d => d.entity.constructor.name === "Wolf").length;
-
-            if (sheepCount < 4 && entities.length < MAX_ENTITIES_LIMIT) {
-                spawnWildAnimal("Sheep");
-            }
-            if (cowCount < 4 && entities.length < MAX_ENTITIES_LIMIT) {
-                spawnWildAnimal("Cow");
-            }
-            if (wolfCount < 2 && entities.length < MAX_ENTITIES_LIMIT) {
-                spawnWildAnimal("Wolf");
+            // Resource Regeneration (runs every 100 ticks)
+            if (ticks % 100 === 0) {
+                for (let k = 0; k < 50; k++) {
+                    let rx = Math.floor(Math.random() * X_TILES);
+                    let ry = Math.floor(Math.random() * Y_TILES);
+                    if (world[rx] && world[rx][ry]) {
+                        let tile = world[rx][ry];
+                        if (tile.entities.length === 0 && tile.worldObjects.length === 0 && tile.items.length === 0) {
+                            tile.spawnResources();
+                            if (tile.worldObjects.length > 0 || tile.items.length > 0) {
+                                //@ts-ignore
+                                if (typeof drawTileToOffscreen === "function") {
+                                    drawTileToOffscreen(rx, ry);
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -1026,7 +1056,7 @@ async function loadWasm() {
 }
 loadWasm();
 
-function spawnWildAnimal(type: string): void {
+function spawnWildAnimalPair(type: string): void {
     let spawned = false;
     for (let attempts = 0; attempts < 100 && !spawned; attempts++) {
         let rx = Math.floor(Math.random() * X_TILES);
@@ -1034,25 +1064,57 @@ function spawnWildAnimal(type: string): void {
         if (world[rx] && world[rx][ry]) {
             let tile = world[rx][ry];
             if (tile.type !== TileType.WATER && tile.type !== TileType.DARK_WATER && tile.entities.length < TILE_ENTITY_LIMIT && tile.worldObjects.length === 0) {
-                let animal: Entity;
-                if (type === "Sheep") {
-                    //@ts-ignore
-                    animal = new Sheep();
-                } else if (type === "Cow") {
-                    //@ts-ignore
-                    animal = new Cow();
-                } else {
-                    //@ts-ignore
-                    animal = new Wolf();
+                // Find a nearby tile for the partner
+                let partnerTile: WorldTile | null = null;
+                let px = 0, py = 0;
+                let dirs = [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1]];
+                for (let dir of dirs) {
+                    let tx = rx + dir[0];
+                    let ty = ry + dir[1];
+                    if (world[tx] && world[tx][ty]) {
+                        let t = world[tx][ty];
+                        if (t.type !== TileType.WATER && t.type !== TileType.DARK_WATER && t.entities.length < TILE_ENTITY_LIMIT && t.worldObjects.length === 0) {
+                            partnerTile = t;
+                            px = tx;
+                            py = ty;
+                            break;
+                        }
+                    }
                 }
-                tile.addEntity(animal);
-                entities.push({ entity: animal, pos: Vector2(rx, ry) });
-                spawned = true;
 
-                //@ts-ignore
-                if (typeof TestTools !== "undefined") {
+                if (partnerTile) {
+                    let animal1: Entity;
+                    let animal2: Entity;
+                    if (type === "Sheep") {
+                        //@ts-ignore
+                        animal1 = new Sheep();
+                        //@ts-ignore
+                        animal2 = new Sheep();
+                    } else if (type === "Cow") {
+                        //@ts-ignore
+                        animal1 = new Cow();
+                        //@ts-ignore
+                        animal2 = new Cow();
+                    } else {
+                        //@ts-ignore
+                        animal1 = new Wolf();
+                        //@ts-ignore
+                        animal2 = new Wolf();
+                    }
+
+                    tile.addEntity(animal1);
+                    entities.push({ entity: animal1, pos: Vector2(rx, ry) });
+
+                    partnerTile.addEntity(animal2);
+                    entities.push({ entity: animal2, pos: Vector2(px, py) });
+
+                    spawned = true;
+
                     //@ts-ignore
-                    TestTools.updateStats();
+                    if (typeof TestTools !== "undefined") {
+                        //@ts-ignore
+                        TestTools.updateStats();
+                    }
                 }
             }
         }

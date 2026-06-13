@@ -38,12 +38,12 @@ class Cow extends Entity {
         if (this.isPenned) {
             var feedNow = performance.now();
             if (feedNow - this.lastFeedTime >= 20000) {
-                // Find nearest town_hall that has food
+                // Find nearest town_hall that has surplus food
                 var hallPos = this.findNearest(currentX, currentY, 20, (tile) => {
                     return tile.worldObjects.some(o =>
                         o.name === "town_hall" &&
                         o.stockpile !== undefined &&
-                        ((o.stockpile["wheat"] || 0) > 0 || (o.stockpile["apple"] || 0) > 0 || (o.stockpile["berry"] || 0) > 0)
+                        ((o.stockpile["wheat"] || 0) > 5 || (o.stockpile["apple"] || 0) > 5 || (o.stockpile["berry"] || 0) > 5)
                     );
                 });
                 if (hallPos) {
@@ -51,9 +51,9 @@ class Cow extends Entity {
                     var hallObj = hallTile.worldObjects.find(o => o.name === "town_hall" && o.stockpile !== undefined);
                     if (hallObj && hallObj.stockpile) {
                         var sp = hallObj.stockpile;
-                        if ((sp["wheat"] || 0) > 0) {
+                        if ((sp["wheat"] || 0) > 5) {
                             sp["wheat"]--;
-                        } else if ((sp["apple"] || 0) > 0) {
+                        } else if ((sp["apple"] || 0) > 5) {
                             sp["apple"]--;
                         } else {
                             sp["berry"]--;
@@ -63,8 +63,16 @@ class Cow extends Entity {
                         this.stateText = "Grazing";
                     }
                 } else {
-                    // No food available in stockpile — animal goes hungry
-                    this.stateText = "Hungry";
+                    // Try to graze locally on grass or swamp tile
+                    var currentTile = world[currentX][currentY];
+                    if (currentTile.type === TileType.GRASS || currentTile.type === TileType.DARK_GRASS || currentTile.type === TileType.SWAMP) {
+                        this.hunger = Math.max(0, this.hunger - 30);
+                        this.lastFeedTime = feedNow;
+                        this.stateText = "Grazing Grass";
+                    } else {
+                        // No food available in stockpile and no grass — animal goes hungry
+                        this.stateText = "Hungry";
+                    }
                 }
             }
         }
@@ -165,6 +173,9 @@ class Cow extends Entity {
                                         
                                         this.lastMatingTick = this.ticksAlive;
                                         partner.lastMatingTick = partner.ticksAlive;
+                                        
+                                        this.hunger = Math.min(100, this.hunger + 40);
+                                        partner.hunger = Math.min(100, partner.hunger + 40);
                                         
                                         this.stateText = "Grazing";
                                         partner.stateText = "Grazing";

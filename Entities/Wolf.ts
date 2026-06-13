@@ -1,17 +1,19 @@
 class Wolf extends Entity {
     /** The radius of the search square that is used to find the wolf's prey */
-    radarLength: number = 10;
+    radarLength: number = 15;
 
     constructor(customGenome?: Genome) {
         super(true, true, "gray", customGenome);
         this.stateText = "Hunting";
+        // Wolves reproduce much slower than their prey in nature (longer mating cooldown)
+        this.matingCooldown = 15000 + Math.random() * 5000;
     }
 
     move: ((currentX: number, currentY: number) => Vector2) | null = (currentX, currentY) => {
         // Hunger ticking scaled by hungerRateGene
-        this.hunger = Math.min(100, this.hunger + 0.04 * this.genome.hungerRateGene);
+        this.hunger = Math.min(100, this.hunger + 0.03 * this.genome.hungerRateGene);
         if (this.hunger >= 100) {
-            this.health = Math.max(0, this.health - 2);
+            this.health = Math.max(0, this.health - 1);
         } else {
             this.health = Math.min(100, this.health + 0.1);
         }
@@ -71,6 +73,9 @@ class Wolf extends Entity {
                                         
                                         this.lastMatingTick = this.ticksAlive;
                                         partner.lastMatingTick = partner.ticksAlive;
+                                        
+                                        this.hunger = Math.min(100, this.hunger + 50);
+                                        partner.hunger = Math.min(100, partner.hunger + 50);
                                         
                                         this.stateText = "Hunting";
                                         partner.stateText = "Hunting";
