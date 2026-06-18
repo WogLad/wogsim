@@ -6,7 +6,13 @@ const ITEM_GOLD_VALUES = {
     "Apple": 3,
     "Wheat": 4,
     "Fish": 3,
-    "Shell": 1
+    "Shell": 1,
+    "Tree Seed": 1,
+    "Pine Seed": 1,
+    "Palm Seed": 1,
+    "Wheat Seed": 1,
+    "Shrub Seed": 1,
+    "Cactus Seed": 1
 };
 class Item {
     constructor(name) {

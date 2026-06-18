@@ -583,9 +583,9 @@ class TestTools {
             console.warn("No data to export.");
             return;
         }
-        let csvContent = "Tick,TotalPopulation,Woodcutter,Fisherman,Miner,Farmer,Sheep,Cow,Wolf,AvgLifespan,AvgHungerRate,AvgSpeed,TotalGold,TotalFood,TotalMaterials,AvgHealth,AvgHunger,StarvationRate,HomelessnessRate,AvgAge,JuvenileRatio,Working,Sleeping,Idle,SeekingMate\n";
+        let csvContent = "Tick,TotalPopulation,Woodcutter,Fisherman,Miner,Farmer,Sheep,Cow,Wolf,AvgLifespan,AvgHungerRate,AvgSpeed,TotalGold,TotalFood,TotalMaterials,AvgHealth,AvgHunger,StarvationRate,HomelessnessRate,AvgAge,JuvenileRatio,Working,Sleeping,Idle,SeekingMate,Trees,Pine,Palm,Fish,Stone,Wheat,Shrub,Cactus\n";
         for (let i = 0; i < hist.ticks.length; i++) {
-            csvContent += `${hist.ticks[i]},${hist.total[i]},${hist.woodcutter[i]},${hist.fisherman[i]},${hist.miner[i]},${hist.farmer[i]},${hist.sheep[i]},${hist.cow[i]},${hist.wolf[i]},${hist.avgLifespan[i]},${hist.avgHungerRate[i]},${hist.avgSpeed[i]},${hist.totalGold[i]},${hist.totalFood[i]},${hist.totalMaterials[i]},${hist.avgHealth[i]},${hist.avgHunger[i]},${hist.starvationRate[i]},${hist.homelessnessRate[i]},${hist.avgAge[i]},${hist.juvenileRatio[i]},${hist.working[i]},${hist.sleeping[i]},${hist.idle[i]},${hist.seekingMate[i]}\n`;
+            csvContent += `${hist.ticks[i]},${hist.total[i]},${hist.woodcutter[i]},${hist.fisherman[i]},${hist.miner[i]},${hist.farmer[i]},${hist.sheep[i]},${hist.cow[i]},${hist.wolf[i]},${hist.avgLifespan[i]},${hist.avgHungerRate[i]},${hist.avgSpeed[i]},${hist.totalGold[i]},${hist.totalFood[i]},${hist.totalMaterials[i]},${hist.avgHealth[i]},${hist.avgHunger[i]},${hist.starvationRate[i]},${hist.homelessnessRate[i]},${hist.avgAge[i]},${hist.juvenileRatio[i]},${hist.working[i]},${hist.sleeping[i]},${hist.idle[i]},${hist.seekingMate[i]},${hist.tree[i] || 0},${hist.pine_tree[i] || 0},${hist.palm_tree[i] || 0},${hist.fish[i] || 0},${hist.stone[i] || 0},${hist.wheat[i] || 0},${hist.shrub[i] || 0},${hist.cactus[i] || 0}\n`;
         }
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
@@ -729,6 +729,61 @@ class TestTools {
         h.sleeping.push(sleeping);
         h.idle.push(idle);
         h.seekingMate.push(seekingMate);
+        // Count natural resources in the world
+        let treeCount = 0, pineCount = 0, palmCount = 0, fishCount = 0;
+        let stoneCount = 0, wheatCount = 0, shrubCount = 0, cactusCount = 0;
+        for (let x = 0; x < X_TILES; x++) {
+            if (!world[x])
+                continue;
+            for (let y = 0; y < Y_TILES; y++) {
+                let tile = world[x][y];
+                if (tile) {
+                    for (let obj of tile.worldObjects) {
+                        if (obj.name === "tree")
+                            treeCount++;
+                        else if (obj.name === "pine_tree")
+                            pineCount++;
+                        else if (obj.name === "palm_tree")
+                            palmCount++;
+                        else if (obj.name === "fish")
+                            fishCount++;
+                        else if (obj.name === "stone")
+                            stoneCount++;
+                        else if (obj.name === "wheat")
+                            wheatCount++;
+                        else if (obj.name === "shrub")
+                            shrubCount++;
+                        else if (obj.name === "cactus")
+                            cactusCount++;
+                    }
+                }
+            }
+        }
+        // Initialize resource arrays on h if not present (legacy support)
+        if (!h.tree)
+            h.tree = [];
+        if (!h.pine_tree)
+            h.pine_tree = [];
+        if (!h.palm_tree)
+            h.palm_tree = [];
+        if (!h.fish)
+            h.fish = [];
+        if (!h.stone)
+            h.stone = [];
+        if (!h.wheat)
+            h.wheat = [];
+        if (!h.shrub)
+            h.shrub = [];
+        if (!h.cactus)
+            h.cactus = [];
+        h.tree.push(treeCount);
+        h.pine_tree.push(pineCount);
+        h.palm_tree.push(palmCount);
+        h.fish.push(fishCount);
+        h.stone.push(stoneCount);
+        h.wheat.push(wheatCount);
+        h.shrub.push(shrubCount);
+        h.cactus.push(cactusCount);
     }
     static renderPopulationGraph(container) {
         var _a;
@@ -790,7 +845,15 @@ class TestTools {
                 working: hist.working.slice(startIdx),
                 sleeping: hist.sleeping.slice(startIdx),
                 idle: hist.idle.slice(startIdx),
-                seekingMate: hist.seekingMate.slice(startIdx)
+                seekingMate: hist.seekingMate.slice(startIdx),
+                tree: hist.tree.slice(startIdx),
+                pine_tree: hist.pine_tree.slice(startIdx),
+                palm_tree: hist.palm_tree.slice(startIdx),
+                fish: hist.fish.slice(startIdx),
+                stone: hist.stone.slice(startIdx),
+                wheat: hist.wheat.slice(startIdx),
+                shrub: hist.shrub.slice(startIdx),
+                cactus: hist.cactus.slice(startIdx)
             };
             dataLen = this.POP_HISTORY_MAX;
         }
@@ -971,6 +1034,246 @@ class TestTools {
         }
         return legend;
     }
+    static renderEnvironmentGraph(container) {
+        var _a;
+        // Create or reuse canvas
+        let canvas = container.querySelector("canvas#envGraphCanvas");
+        if (!canvas) {
+            canvas = document.createElement("canvas");
+            canvas.id = "envGraphCanvas";
+            canvas.style.width = "100%";
+            canvas.style.height = "220px";
+            canvas.style.borderRadius = "6px";
+            canvas.style.display = "block";
+        }
+        let isExpanded = !!((_a = container.closest(".stats-card")) === null || _a === void 0 ? void 0 : _a.classList.contains("expanded"));
+        let h = isExpanded ? 400 : 220;
+        // Set actual pixel size from container width
+        let rect = container.getBoundingClientRect();
+        let dpr = window.devicePixelRatio || 1;
+        let w = Math.floor(rect.width - 32); // account for padding
+        canvas.width = w * dpr;
+        canvas.height = h * dpr;
+        canvas.style.width = w + "px";
+        canvas.style.height = h + "px";
+        let gCtx = canvas.getContext("2d");
+        if (!gCtx)
+            return;
+        gCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        // Background
+        gCtx.fillStyle = "rgba(0, 0, 0, 0.3)";
+        gCtx.fillRect(0, 0, w, h);
+        let hist = this.popHistory;
+        let dataLen = hist.ticks.length;
+        // Slice history if not expanded and length exceeds limit
+        let displayHistory = hist;
+        if (!isExpanded && dataLen > this.POP_HISTORY_MAX) {
+            let startIdx = dataLen - this.POP_HISTORY_MAX;
+            displayHistory = {
+                ticks: hist.ticks.slice(startIdx),
+                tree: (hist.tree || []).slice(startIdx),
+                pine_tree: (hist.pine_tree || []).slice(startIdx),
+                palm_tree: (hist.palm_tree || []).slice(startIdx),
+                fish: (hist.fish || []).slice(startIdx),
+                stone: (hist.stone || []).slice(startIdx),
+                wheat: (hist.wheat || []).slice(startIdx),
+                shrub: (hist.shrub || []).slice(startIdx),
+                cactus: (hist.cactus || []).slice(startIdx),
+            };
+            dataLen = this.POP_HISTORY_MAX;
+        }
+        else {
+            displayHistory = {
+                ticks: hist.ticks,
+                tree: hist.tree || [],
+                pine_tree: hist.pine_tree || [],
+                palm_tree: hist.palm_tree || [],
+                fish: hist.fish || [],
+                stone: hist.stone || [],
+                wheat: hist.wheat || [],
+                shrub: hist.shrub || [],
+                cactus: hist.cactus || [],
+            };
+        }
+        if (dataLen < 2) {
+            gCtx.fillStyle = "rgba(255, 255, 255, 0.3)";
+            gCtx.font = "12px sans-serif";
+            gCtx.textAlign = "center";
+            gCtx.fillText("Collecting data... (need at least 2 samples)", w / 2, h / 2);
+            // Build the HTML with canvas
+            container.innerHTML = "";
+            container.appendChild(this.buildEnvGraphHeader(isExpanded));
+            container.appendChild(canvas);
+            container.appendChild(this.buildEnvGraphLegend());
+            return;
+        }
+        // Chart margins
+        let ml = 40, mr = 12, mt = 12, mb = 28;
+        let cw = w - ml - mr;
+        let ch = h - mt - mb;
+        // Find Y max across all series
+        let yMax = 0;
+        let series = [
+            { key: "Trees", color: "#228b22", data: displayHistory.tree || [] },
+            { key: "Pine", color: "#1e3f20", data: displayHistory.pine_tree || [] },
+            { key: "Palm", color: "#2e8b57", data: displayHistory.palm_tree || [] },
+            { key: "Fish", color: "#4682b4", data: displayHistory.fish || [] },
+            { key: "Stone", color: "#808080", data: displayHistory.stone || [] },
+            { key: "Wheat", color: "#daa520", data: displayHistory.wheat || [] },
+            { key: "Shrub", color: "#3cb371", data: displayHistory.shrub || [] },
+            { key: "Cactus", color: "#2d7a47", data: displayHistory.cactus || [] },
+        ];
+        for (let s of series) {
+            for (let v of s.data) {
+                if (v > yMax)
+                    yMax = v;
+            }
+        }
+        yMax = Math.max(yMax, 5); // Minimum scale
+        yMax = Math.ceil(yMax * 1.1); // 10% headroom
+        let xMin = displayHistory.ticks[0];
+        let xMax = displayHistory.ticks[dataLen - 1];
+        let xRange = Math.max(xMax - xMin, 1);
+        // Grid lines
+        gCtx.strokeStyle = "rgba(255, 255, 255, 0.06)";
+        gCtx.lineWidth = 1;
+        let yGridCount = 5;
+        gCtx.font = "10px Menlo, Monaco, monospace";
+        gCtx.fillStyle = "rgba(255, 255, 255, 0.3)";
+        gCtx.textAlign = "right";
+        for (let gi = 0; gi <= yGridCount; gi++) {
+            let yVal = Math.round((yMax / yGridCount) * gi);
+            let yPos = mt + ch - (yVal / yMax) * ch;
+            gCtx.beginPath();
+            gCtx.moveTo(ml, yPos);
+            gCtx.lineTo(ml + cw, yPos);
+            gCtx.stroke();
+            gCtx.fillText(yVal.toString(), ml - 4, yPos + 3);
+        }
+        // X-axis tick labels
+        gCtx.textAlign = "center";
+        gCtx.fillStyle = "rgba(255, 255, 255, 0.3)";
+        let xLabelCount = Math.min(6, dataLen);
+        for (let xi = 0; xi < xLabelCount; xi++) {
+            let idx = Math.floor((xi / (xLabelCount - 1)) * (dataLen - 1));
+            let tickVal = displayHistory.ticks[idx];
+            let xPos = ml + ((tickVal - xMin) / xRange) * cw;
+            gCtx.fillText(tickVal.toString(), xPos, h - 4);
+        }
+        // Draw each series line
+        for (let s of series) {
+            gCtx.strokeStyle = s.color;
+            gCtx.lineWidth = 1.8;
+            gCtx.lineJoin = "round";
+            gCtx.beginPath();
+            for (let i = 0; i < dataLen; i++) {
+                let x = ml + ((displayHistory.ticks[i] - xMin) / xRange) * cw;
+                let y = mt + ch - ((s.data[i] || 0) / yMax) * ch;
+                if (i === 0)
+                    gCtx.moveTo(x, y);
+                else
+                    gCtx.lineTo(x, y);
+            }
+            gCtx.stroke();
+        }
+        // Axis lines
+        gCtx.strokeStyle = "rgba(255, 255, 255, 0.15)";
+        gCtx.lineWidth = 1;
+        gCtx.beginPath();
+        gCtx.moveTo(ml, mt);
+        gCtx.lineTo(ml, mt + ch);
+        gCtx.lineTo(ml + cw, mt + ch);
+        gCtx.stroke();
+        // Assemble the card HTML
+        container.innerHTML = "";
+        container.appendChild(this.buildEnvGraphHeader(isExpanded));
+        container.appendChild(canvas);
+        container.appendChild(this.buildEnvGraphLegend());
+    }
+    static buildEnvGraphHeader(isExpanded) {
+        let header = document.createElement("div");
+        header.style.cssText = "display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;";
+        let title = document.createElement("div");
+        title.className = "stat-big-label";
+        title.style.cssText = "margin: 0; text-align: left;";
+        title.innerText = isExpanded ? "FULL ENVIRONMENT HISTORY (TICK 0+)" : "RESOURCES OVER TIME (RECENT)";
+        let btnContainer = document.createElement("div");
+        btnContainer.style.cssText = "display: flex; gap: 8px;";
+        if (!isExpanded) {
+            let btn = document.createElement("button");
+            btn.className = "pop-graph-toggle-btn";
+            btn.innerText = "Bar View";
+            btn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                TestTools.envGraphMode = false;
+                TestTools.refreshWorldStats();
+            });
+            btnContainer.appendChild(btn);
+        }
+        let expandBtn = document.createElement("button");
+        expandBtn.className = "pop-graph-toggle-btn";
+        if (isExpanded) {
+            expandBtn.style.cssText = "background: rgba(255, 51, 102, 0.2); border-color: rgba(255, 51, 102, 0.4); color: #ff3366;";
+        }
+        expandBtn.innerText = isExpanded ? "✕ Collapse" : "🔍 Expand";
+        expandBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            let envEl = document.getElementById("statsEnvironment");
+            if (envEl) {
+                let card = envEl.closest(".stats-card");
+                if (card) {
+                    card.classList.toggle("expanded");
+                    let overlay = document.getElementById("statsGraphBackdrop");
+                    if (card.classList.contains("expanded")) {
+                        if (!overlay) {
+                            overlay = document.createElement("div");
+                            overlay.id = "statsGraphBackdrop";
+                            overlay.style.cssText = "position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); z-index: 20500; transition: opacity 0.2s ease; border-radius: 16px;";
+                            overlay.addEventListener("click", (ev) => {
+                                ev.stopPropagation();
+                                card === null || card === void 0 ? void 0 : card.classList.remove("expanded");
+                                overlay === null || overlay === void 0 ? void 0 : overlay.remove();
+                                TestTools.refreshWorldStats();
+                            });
+                            let popup = card.closest(".stats-popup");
+                            if (popup) {
+                                popup.appendChild(overlay);
+                            }
+                        }
+                    }
+                    else {
+                        overlay === null || overlay === void 0 ? void 0 : overlay.remove();
+                    }
+                }
+            }
+            TestTools.refreshWorldStats();
+        });
+        btnContainer.appendChild(expandBtn);
+        header.appendChild(title);
+        header.appendChild(btnContainer);
+        return header;
+    }
+    static buildEnvGraphLegend() {
+        let legend = document.createElement("div");
+        legend.className = "pop-graph-legend";
+        let items = [
+            { label: "Trees", color: "#228b22" },
+            { label: "Pine", color: "#1e3f20" },
+            { label: "Palm", color: "#2e8b57" },
+            { label: "Fish", color: "#4682b4" },
+            { label: "Stone", color: "#808080" },
+            { label: "Wheat", color: "#daa520" },
+            { label: "Shrub", color: "#3cb371" },
+            { label: "Cactus", color: "#2d7a47" },
+        ];
+        for (let item of items) {
+            let el = document.createElement("span");
+            el.className = "pop-graph-legend-item";
+            el.innerHTML = `<span class="pop-graph-legend-swatch" style="background: ${item.color};"></span>${item.label}`;
+            legend.appendChild(el);
+        }
+        return legend;
+    }
     static refreshWorldStats() {
         // Record population sample
         this.recordPopulationSample();
@@ -1101,13 +1404,19 @@ class TestTools {
                 onMatingCooldown++;
         }
         // Village stockpile aggregation
-        let globalStockpile = { wood: 0, fish: 0, stone: 0, wheat: 0, apple: 0, berry: 0, gold: 0 };
+        let globalStockpile = {
+            wood: 0, fish: 0, stone: 0, wheat: 0, apple: 0, berry: 0, gold: 0,
+            tree_seed: 0, pine_seed: 0, palm_seed: 0, wheat_seed: 0, shrub_seed: 0, cactus_seed: 0
+        };
         let villageCount = townHallPositions.length;
         let villageData = [];
         for (let thPos of townHallPositions) {
             let tile = world[thPos.x] ? world[thPos.x][thPos.y] : null;
             let thObj = tile ? tile.worldObjects.find((o) => o.name === "town_hall") : null;
-            let sp = thObj && thObj.stockpile ? thObj.stockpile : { wood: 0, fish: 0, stone: 0, wheat: 0, apple: 0, berry: 0, gold: 0 };
+            let sp = thObj && thObj.stockpile ? thObj.stockpile : {
+                wood: 0, fish: 0, stone: 0, wheat: 0, apple: 0, berry: 0, gold: 0,
+                tree_seed: 0, pine_seed: 0, palm_seed: 0, wheat_seed: 0, shrub_seed: 0, cactus_seed: 0
+            };
             for (let key in globalStockpile) {
                 globalStockpile[key] += (sp[key] || 0);
             }
@@ -1352,22 +1661,43 @@ class TestTools {
                     }
                 }
             }
-            envEl.innerHTML = `
-                ${statLine("World Size", `${X_TILES} × ${Y_TILES}`, "accent")}
-                ${statLine("Total Tiles", (X_TILES * Y_TILES).toLocaleString(), "")}
-                <hr class="stat-divider">
-                <div class="stat-section-label">Natural Resources</div>
-                <div class="stat-grid">
-                    ${statLine("🌳 Trees", `${treeCount}`, "")}
-                    ${statLine("🌲 Pine", `${pineCount}`, "")}
-                    ${statLine("🌴 Palm", `${palmCount}`, "")}
-                    ${statLine("🐟 Fish", `${fishCount}`, "")}
-                    ${statLine("🪨 Stone", `${stoneCount}`, "")}
-                    ${statLine("🌾 Wheat", `${wheatCount}`, "")}
-                    ${statLine("🌿 Shrub", `${shrubCount}`, "")}
-                    ${statLine("🌵 Cactus", `${cactusCount}`, "")}
-                </div>
-            `;
+            if (this.envGraphMode) {
+                this.renderEnvironmentGraph(envEl);
+            }
+            else {
+                envEl.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div class="stat-big" style="flex: 1;">
+                            <div class="stat-big-number">${(X_TILES * Y_TILES).toLocaleString()}</div>
+                            <div class="stat-big-label">Total Tiles</div>
+                        </div>
+                        <button class="pop-graph-toggle-btn" id="envGraphToggleBtn">📈 Graph</button>
+                    </div>
+                    <hr class="stat-divider">
+                    ${statLine("World Size", `${X_TILES} × ${Y_TILES}`, "accent")}
+                    <hr class="stat-divider">
+                    <div class="stat-section-label">Natural Resources</div>
+                    <div class="stat-grid">
+                        ${statLine("🌳 Trees", `${treeCount}`, "")}
+                        ${statLine("🌲 Pine", `${pineCount}`, "")}
+                        ${statLine("🌴 Palm", `${palmCount}`, "")}
+                        ${statLine("🐟 Fish", `${fishCount}`, "")}
+                        ${statLine("🪨 Stone", `${stoneCount}`, "")}
+                        ${statLine("🌾 Wheat", `${wheatCount}`, "")}
+                        ${statLine("🌿 Shrub", `${shrubCount}`, "")}
+                        ${statLine("🌵 Cactus", `${cactusCount}`, "")}
+                    </div>
+                `;
+                // Bind the toggle button
+                let toggleBtn = document.getElementById("envGraphToggleBtn");
+                if (toggleBtn) {
+                    toggleBtn.addEventListener("click", (e) => {
+                        e.stopPropagation();
+                        TestTools.envGraphMode = true;
+                        TestTools.refreshWorldStats();
+                    });
+                }
+            }
         }
         // 8. Total Stockpile Resources
         const resEl = document.getElementById("statsResources");
@@ -1376,7 +1706,8 @@ class TestTools {
             for (let key in globalStockpile)
                 totalRes += globalStockpile[key];
             const resourceEmoji = {
-                wood: "🪵", fish: "🐟", stone: "🪨", wheat: "🌾", apple: "🍎", berry: "🫐", gold: "💰"
+                wood: "🪵", fish: "🐟", stone: "🪨", wheat: "🌾", apple: "🍎", berry: "🫐", gold: "💰",
+                tree_seed: "🌱", pine_seed: "🌲", palm_seed: "🌴", wheat_seed: "🌾", shrub_seed: "🌿", cactus_seed: "🌵"
             };
             let maxRes = Math.max(...Object.values(globalStockpile), 1);
             let html = `
@@ -1390,7 +1721,8 @@ class TestTools {
                 let emoji = resourceEmoji[key] || "📦";
                 let value = globalStockpile[key];
                 let colorClass = key === "gold" ? "gold" : "green";
-                html += meterBar(`${emoji} ${key.charAt(0).toUpperCase() + key.slice(1)}`, value, maxRes, colorClass);
+                let label = key.split("_").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+                html += meterBar(`${emoji} ${label}`, value, maxRes, colorClass);
             }
             resEl.innerHTML = html;
         }
@@ -1436,6 +1768,7 @@ TestTools.inspectedEntity = null;
 TestTools.statsRefreshInterval = null;
 TestTools.isStatsOpen = false;
 TestTools.popGraphMode = false; // false = bar chart, true = graph
+TestTools.envGraphMode = false; // false = bar chart, true = graph
 // Population history for time-series graph
 TestTools.popHistory = {
     ticks: [], woodcutter: [], fisherman: [], miner: [], farmer: [], sheep: [], cow: [], wolf: [], total: [],
@@ -1443,7 +1776,8 @@ TestTools.popHistory = {
     totalGold: [], totalFood: [], totalMaterials: [],
     avgHealth: [], avgHunger: [], starvationRate: [], homelessnessRate: [],
     avgAge: [], juvenileRatio: [],
-    working: [], sleeping: [], idle: [], seekingMate: []
+    working: [], sleeping: [], idle: [], seekingMate: [],
+    tree: [], pine_tree: [], palm_tree: [], fish: [], stone: [], wheat: [], shrub: [], cactus: []
 };
 TestTools.POP_HISTORY_MAX = 600; // Max data points (~30,000 ticks at 50-tick interval)
 TestTools.POP_SAMPLE_INTERVAL = 50; // Record every N ticks

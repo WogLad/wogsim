@@ -9,6 +9,25 @@ class Human extends Entity {
         this.professionLetter = professionLetter;
     }
 
+    getClosestVillageCenter(currentX: number, currentY: number): Vector2 {
+        //@ts-ignore
+        if (typeof townHallPositions !== "undefined" && townHallPositions.length > 0) {
+            let closest = townHallPositions[0];
+            let minD = Math.abs(currentX - closest.x) + Math.abs(currentY - closest.y);
+            for (let i = 1; i < townHallPositions.length; i++) {
+                let th = townHallPositions[i];
+                let d = Math.abs(currentX - th.x) + Math.abs(currentY - th.y);
+                if (d < minD) {
+                    minD = d;
+                    closest = th;
+                }
+            }
+            return closest;
+        }
+        //@ts-ignore
+        return typeof STORAGE_POS !== "undefined" ? STORAGE_POS : Vector2(currentX, currentY);
+    }
+
     process: () => void = () => {
         // Code to be ran every frame goes here.
     }
@@ -163,9 +182,10 @@ class Human extends Entity {
                     for (var entry of this.inventory) {
                         if (!(entry.item instanceof Tool)) {
                             var nameLower = entry.item.name.toLowerCase();
+                            var key = nameLower.replace(" ", "_");
                             if (storageObj && storageObj.stockpile) {
-                                if (nameLower in storageObj.stockpile) {
-                                    storageObj.stockpile[nameLower] += entry.count;
+                                if (key in storageObj.stockpile) {
+                                    storageObj.stockpile[key] += entry.count;
                                 } else {
                                     storageObj.stockpile.wood += entry.count;
                                 }
@@ -174,6 +194,28 @@ class Human extends Entity {
                         }
                     }
                     this.inventory = this.inventory.filter(entry => entry.item instanceof Tool);
+
+                    // Withdraw seeds from stockpile if available
+                    if (storageObj && storageObj.stockpile) {
+                        var sp = storageObj.stockpile;
+                        if (this.professionLetter === "W") {
+                            for (var seedKey of ["tree_seed", "pine_seed", "palm_seed", "cactus_seed"]) {
+                                while ((sp[seedKey] || 0) > 0 && this.getTotalItemCount() < INVENTORY_MAX_CAPACITY) {
+                                    sp[seedKey]--;
+                                    var itemName = seedKey.replace("_", " ").split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+                                    this.addToInventory(new Item(itemName));
+                                }
+                            }
+                        } else if (this.professionLetter === "P") {
+                            for (var seedKey of ["wheat_seed", "shrub_seed"]) {
+                                while ((sp[seedKey] || 0) > 0 && this.getTotalItemCount() < INVENTORY_MAX_CAPACITY) {
+                                    sp[seedKey]--;
+                                    var itemName = seedKey.replace("_", " ").split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+                                    this.addToInventory(new Item(itemName));
+                                }
+                            }
+                        }
+                    }
 
                     // Buy food from stockpile if hungry
                     if (this.hunger > 10 && storageObj && storageObj.stockpile) {

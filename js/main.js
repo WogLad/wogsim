@@ -521,14 +521,19 @@ function updateStockpileUI() {
             return;
         }
     }
-    const resources = ["wood", "fish", "stone", "wheat", "apple", "berry", "gold"];
+    const resources = [
+        "wood", "fish", "stone", "wheat", "apple", "berry", "gold",
+        "tree_seed", "pine_seed", "palm_seed", "wheat_seed", "shrub_seed", "cactus_seed"
+    ];
     const labelEl = document.querySelector("#stockpileGroup label");
     if (labelEl && labelEl.innerText !== activeStockpileName) {
         labelEl.innerText = activeStockpileName;
     }
     for (const res of resources) {
         if (!stockpileElements[res]) {
-            stockpileElements[res] = document.getElementById("stockpile" + res.charAt(0).toUpperCase() + res.slice(1));
+            // Mapping stockpile resource key to HTML element ID, e.g. "tree_seed" -> "stockpileTreeSeed"
+            const idSuffix = res.split("_").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join("");
+            stockpileElements[res] = document.getElementById("stockpile" + idSuffix);
         }
         const el = stockpileElements[res];
         if (el) {
