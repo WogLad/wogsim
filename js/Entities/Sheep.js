@@ -77,29 +77,24 @@ class Sheep extends Entity {
                 return Vector2(0, 0);
             }
             var deviation = Vector2(0, 0);
-            if (this.moveQueue.length > 0) {
-                deviation.x = this.moveQueue[0].x - currentX;
-                deviation.y = this.moveQueue[0].y - currentY;
-                this.moveQueue.shift();
+            if (this.moveQueue.length > this.moveQueueIndex) {
+                deviation.x = this.moveQueue[this.moveQueueIndex].x - currentX;
+                deviation.y = this.moveQueue[this.moveQueueIndex].y - currentY;
+                this.moveQueueIndex++;
+                if (this.moveQueueIndex >= this.moveQueue.length) {
+                    this.moveQueue.length = 0;
+                    this.moveQueueIndex = 0;
+                }
                 return deviation;
             }
-            // 1. Check if there is a Wolf nearby (within 6 tiles) using constructor name to avoid load order issues
-            var nearestWolf = null;
-            for (var dx = -6; dx <= 6; dx++) {
-                for (var dy = -6; dy <= 6; dy++) {
-                    var tx = currentX + dx;
-                    var ty = currentY + dy;
-                    if (world[tx] && world[tx][ty]) {
-                        var tile = world[tx][ty];
-                        if (tile.entities.some(e => e && e.constructor && e.constructor.name === "Wolf")) {
-                            nearestWolf = Vector2(tx, ty);
-                            break;
-                        }
-                    }
+            // 1. Check if there is a Wolf nearby (within 6 tiles) using findNearest for efficiency
+            var nearestWolf = this.findNearest(currentX, currentY, 6, (tile) => {
+                for (var ei = 0; ei < tile.entities.length; ei++) {
+                    if (tile.entities[ei].entityType === ENTITY_TYPE_WOLF)
+                        return true;
                 }
-                if (nearestWolf)
-                    break;
-            }
+                return false;
+            });
             if (nearestWolf) {
                 this.stateText = "Fleeing Wolf!";
                 var fleeDirX = currentX - nearestWolf.x;
@@ -127,22 +122,24 @@ class Sheep extends Entity {
             let currentLimit = (typeof MAX_ENTITIES_LIMIT !== "undefined") ? MAX_ENTITIES_LIMIT : 150;
             if (receptive && entities.length < currentLimit) {
                 let partnerPos = this.findNearest(currentX, currentY, 8, (tile) => {
-                    return tile.entities.some(e => {
-                        if (e !== this && e instanceof Sheep && e.isLiving) {
+                    for (var ei = 0; ei < tile.entities.length; ei++) {
+                        var e = tile.entities[ei];
+                        if (e !== this && e.entityType === ENTITY_TYPE_SHEEP && e.isLiving) {
                             let isPartnerPenned = e.isPenned;
                             if (isPartnerPenned !== this.isPenned)
-                                return false;
+                                continue;
                             let isPartnerReceptive = e.ticksAlive > 2000 && e.hunger < 40 && (e.ticksAlive - e.lastMatingTick > e.matingCooldown);
-                            return isPartnerReceptive;
+                            if (isPartnerReceptive)
+                                return true;
                         }
-                        return false;
-                    });
+                    }
+                    return false;
                 });
                 if (partnerPos) {
                     this.stateText = "Seeking Mate";
                     if (Math.abs(currentX - partnerPos.x) <= 1 && Math.abs(currentY - partnerPos.y) <= 1) {
                         let partnerTile = world[partnerPos.x][partnerPos.y];
-                        let partner = partnerTile.entities.find(e => e !== this && e instanceof Sheep && e.isLiving);
+                        let partner = partnerTile.entities.find(e => e !== this && e.entityType === ENTITY_TYPE_SHEEP && e.isLiving);
                         if (partner) {
                             let spawned = false;
                             for (let dx = -1; dx <= 1 && !spawned; dx++) {
@@ -159,6 +156,7 @@ class Sheep extends Entity {
                                             baby.isPenned = this.isPenned;
                                             bTile.addEntity(baby);
                                             entities.push({ entity: baby, pos: Vector2(bx, by) });
+                                            incrementEntityCount(baby);
                                             this.lastMatingTick = this.ticksAlive;
                                             partner.lastMatingTick = partner.ticksAlive;
                                             this.hunger = Math.min(100, this.hunger + 40);
@@ -223,6 +221,7 @@ class Sheep extends Entity {
             }
             return deviation;
         };
+        this.entityType = ENTITY_TYPE_SHEEP;
         this.stateText = "Grazing";
         // Stagger initial feed timers so all animals don't hit the stockpile simultaneously
         this.lastFeedTime = performance.now() - Math.random() * 20000;

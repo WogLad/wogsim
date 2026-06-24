@@ -85,6 +85,23 @@ class SaveManager {
             // Clear existing world entities
             //@ts-ignore
             entities.splice(0, entities.length);
+            // Reset entity counters
+            //@ts-ignore
+            entityCounts.woodcutter = 0;
+            //@ts-ignore
+            entityCounts.fisherman = 0;
+            //@ts-ignore
+            entityCounts.miner = 0;
+            //@ts-ignore
+            entityCounts.farmer = 0;
+            //@ts-ignore
+            entityCounts.sheep = 0;
+            //@ts-ignore
+            entityCounts.cow = 0;
+            //@ts-ignore
+            entityCounts.wolf = 0;
+            //@ts-ignore
+            entityCounts.total = 0;
 
             // Restore World
             //@ts-ignore
@@ -159,6 +176,8 @@ class SaveManager {
                 // Add to global array
                 //@ts-ignore
                 entities.push({ entity: ent, pos: savedEnt.pos });
+                //@ts-ignore
+                incrementEntityCount(ent);
 
                 // Add to tile
                 //@ts-ignore

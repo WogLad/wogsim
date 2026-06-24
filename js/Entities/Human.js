@@ -24,10 +24,14 @@ class Human extends Entity {
                 return Vector2(0, 0);
             }
             var deviation = Vector2(0, 0); // The change made to the current position of the entity
-            if (this.moveQueue.length > 0) {
-                deviation.x = this.moveQueue[0].x - currentX;
-                deviation.y = this.moveQueue[0].y - currentY;
-                this.moveQueue.shift(); // Removes the first grid node after moving to it (for A*)
+            if (this.moveQueue.length > this.moveQueueIndex) {
+                deviation.x = this.moveQueue[this.moveQueueIndex].x - currentX;
+                deviation.y = this.moveQueue[this.moveQueueIndex].y - currentY;
+                this.moveQueueIndex++;
+                if (this.moveQueueIndex >= this.moveQueue.length) {
+                    this.moveQueue.length = 0;
+                    this.moveQueueIndex = 0;
+                }
             }
             else {
                 // Resource drop-off override
@@ -67,20 +71,13 @@ class Human extends Entity {
                                                 let babyGenome = Entity.crossoverAndMutate(this, partner);
                                                 let babyLetter = Math.random() < 0.5 ? this.professionLetter : partner.professionLetter;
                                                 if (Math.random() < 0.20) {
-                                                    let counts = { W: 0, F: 0, M: 0, P: 0 };
-                                                    for (let ent of entities) {
-                                                        if (ent.entity instanceof Human) {
-                                                            let letter = ent.entity.professionLetter;
-                                                            if (letter === "W")
-                                                                counts.W++;
-                                                            else if (letter === "F")
-                                                                counts.F++;
-                                                            else if (letter === "M")
-                                                                counts.M++;
-                                                            else if (letter === "P")
-                                                                counts.P++;
-                                                        }
-                                                    }
+                                                    // Use cached entity counters instead of looping over all entities (O(1) vs O(N))
+                                                    let counts = {
+                                                        W: entityCounts.woodcutter,
+                                                        F: entityCounts.fisherman,
+                                                        M: entityCounts.miner,
+                                                        P: entityCounts.farmer
+                                                    };
                                                     let minProf = "W";
                                                     let minVal = Infinity;
                                                     for (let prof of ["W", "F", "M", "P"]) {
@@ -102,6 +99,7 @@ class Human extends Entity {
                                                     baby = new Farmer(babyGenome);
                                                 bTile.addEntity(baby);
                                                 entities.push({ entity: baby, pos: Vector2(bx, by) });
+                                                incrementEntityCount(baby);
                                                 this.lastMatingTick = this.ticksAlive;
                                                 partner.lastMatingTick = partner.ticksAlive;
                                                 this.stateText = "Idle";

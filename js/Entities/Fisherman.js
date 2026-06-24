@@ -4,6 +4,7 @@ class Fisherman extends Human {
         super("F", customGenome);
         /** The radius of the search square that is used to find the human's next position */
         this.radarLength = 10;
+        this.entityType = ENTITY_TYPE_FISHERMAN;
         this.addToInventory(new Tool("Fishing Rod"));
         this.professionMover = (currentX, currentY) => {
             // 1. Check if we are already adjacent to water or a tile with fish

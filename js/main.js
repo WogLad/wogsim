@@ -37,8 +37,71 @@ const INVENTORY_MAX_CAPACITY = 20;
 // Village settings and spawn configuration
 var townHallPositions = [];
 var HUMAN_SPAWN_INTERVAL = 100; // Tweak this value to change runtime spawn rate (lower = faster spawn)
-var MAX_ENTITIES_LIMIT = 50000; // Maximum number of concurrent entities in the world to maintain high performance
+var MAX_ENTITIES_LIMIT = 500000; // Maximum number of concurrent entities in the world
 var RESOURCE_SPAWN_MULTIPLIER = 1.0; // Multiplier for natural resource spawning density
+// Cached entity type counters for O(1) population checks (updated on spawn/death)
+var entityCounts = {
+    woodcutter: 0,
+    fisherman: 0,
+    miner: 0,
+    farmer: 0,
+    sheep: 0,
+    cow: 0,
+    wolf: 0,
+    total: 0
+};
+function incrementEntityCount(e) {
+    entityCounts.total++;
+    switch (e.entityType) {
+        case ENTITY_TYPE_WOODCUTTER:
+            entityCounts.woodcutter++;
+            break;
+        case ENTITY_TYPE_FISHERMAN:
+            entityCounts.fisherman++;
+            break;
+        case ENTITY_TYPE_MINER:
+            entityCounts.miner++;
+            break;
+        case ENTITY_TYPE_FARMER:
+            entityCounts.farmer++;
+            break;
+        case ENTITY_TYPE_SHEEP:
+            entityCounts.sheep++;
+            break;
+        case ENTITY_TYPE_COW:
+            entityCounts.cow++;
+            break;
+        case ENTITY_TYPE_WOLF:
+            entityCounts.wolf++;
+            break;
+    }
+}
+function decrementEntityCount(e) {
+    entityCounts.total--;
+    switch (e.entityType) {
+        case ENTITY_TYPE_WOODCUTTER:
+            entityCounts.woodcutter--;
+            break;
+        case ENTITY_TYPE_FISHERMAN:
+            entityCounts.fisherman--;
+            break;
+        case ENTITY_TYPE_MINER:
+            entityCounts.miner--;
+            break;
+        case ENTITY_TYPE_FARMER:
+            entityCounts.farmer--;
+            break;
+        case ENTITY_TYPE_SHEEP:
+            entityCounts.sheep--;
+            break;
+        case ENTITY_TYPE_COW:
+            entityCounts.cow--;
+            break;
+        case ENTITY_TYPE_WOLF:
+            entityCounts.wolf--;
+            break;
+    }
+}
 canvas.height = CANVAS_HEIGHT;
 canvas.width = CANVAS_WIDTH;
 window.addEventListener("resize", () => {
@@ -160,22 +223,69 @@ function init() {
         }
     }
     if (!usePreprocessed) {
-        if (typeof perlin !== "undefined" && typeof perlin.seed === "function") {
-            perlin.seed();
-        }
+        wasmExports.generateNoiseWorldWasm(Math.floor(Math.random() * 10000));
     }
+    var tileTypePtr = wasmExports.getTileTypePointer();
+    var tileTypeArray = new Int32Array(wasmMemory.buffer, tileTypePtr, X_TILES * Y_TILES);
     // Initialise the 2D world array
     var decodedIdx = 0;
+    const TILE_TYPES = [
+        TileType.DARK_GRASS,
+        TileType.GRASS,
+        TileType.GROUND,
+        TileType.WATER,
+        TileType.DARK_WATER,
+        TileType.SAND,
+        TileType.DESERT,
+        TileType.SWAMP,
+        TileType.SNOW
+    ];
+    var objPtr = wasmExports.getTileObjectPointer();
+    var objArr = new Int32Array(wasmMemory.buffer, objPtr, X_TILES * Y_TILES);
+    var itemPtr = wasmExports.getTileItemPointer();
+    var itemArr = new Int32Array(wasmMemory.buffer, itemPtr, X_TILES * Y_TILES);
+    const OBJ_NAMES = [
+        "", "tree", "pine_tree", "palm_tree", "cactus", "shrub", "wheat", "reed",
+        "stone", "campfire", "town_hall", "house", "storage_pile", "fence", "fish"
+    ];
+    const ITEM_NAMES = [
+        "", "Apple", "Berry", "Shell", "Wood"
+    ];
     for (var x = 0; x < X_TILES; x++) {
         world[x] = [];
         for (var y = 0; y < Y_TILES; y++) {
             var tile;
+            let idx = x * Y_TILES + y;
             if (usePreprocessed) {
-                tile = new WorldTile(x, y, decodedTypes[decodedIdx++]);
+                let typeStr = decodedTypes[decodedIdx++];
+                tile = new WorldTile(x, y, typeStr);
+                // Also write to WASM memory to keep it in sync for future WASM use
+                tileTypeArray[idx] = TILE_TYPES.indexOf(typeStr);
             }
             else {
-                tile = new WorldTile(x, y);
+                let typeInt = tileTypeArray[idx];
+                tile = new WorldTile(x, y, TILE_TYPES[typeInt]);
             }
+            world[x][y] = tile;
+        }
+    }
+    if (usePreprocessed) {
+        // Spawn resources in WASM since we just populated the tile types
+        wasmExports.spawnAllResourcesWasm(RESOURCE_SPAWN_MULTIPLIER);
+    }
+    // Sync WASM generated resources into JS WorldTiles
+    for (var x = 0; x < X_TILES; x++) {
+        for (var y = 0; y < Y_TILES; y++) {
+            let idx = x * Y_TILES + y;
+            let tile = world[x][y];
+            // Sync objects from WASM
+            let objId = objArr[idx];
+            if (objId > 0)
+                tile.worldObjects.push(new WorldObject(OBJ_NAMES[objId]));
+            let itemId = itemArr[idx];
+            if (itemId > 0)
+                tile.items.push(new Item(ITEM_NAMES[itemId]));
+            // Initial animal spawning logic (JS-based for now)
             if (tile.type != TileType.WATER && tile.type != TileType.DARK_WATER) {
                 var spawnRoll = Math.random();
                 if (spawnRoll < 0.0007) { // 0.07% chance to spawn a Sheep
@@ -183,21 +293,23 @@ function init() {
                     var s = new Sheep();
                     tile.addEntity(s);
                     entities.push({ entity: s, pos: Vector2(x, y) });
+                    incrementEntityCount(s);
                 }
                 else if (spawnRoll < 0.0014) { // 0.07% chance to spawn a Cow
                     //@ts-ignore
                     var c = new Cow();
                     tile.addEntity(c);
                     entities.push({ entity: c, pos: Vector2(x, y) });
+                    incrementEntityCount(c);
                 }
                 else if (spawnRoll < 0.0017) { // 0.03% chance to spawn a Wolf
                     //@ts-ignore
                     var w = new Wolf();
                     tile.addEntity(w);
                     entities.push({ entity: w, pos: Vector2(x, y) });
+                    incrementEntityCount(w);
                 }
             }
-            world[x][y] = tile;
         }
     }
     // Sync the A* Grid to WASM (Pre-village)
@@ -226,10 +338,12 @@ function init() {
         else if (cmd === 2) { // Ground
             tile.type = TileType.GROUND;
             tile.worldObjects = tile.worldObjects.filter(o => o.name === "town_hall" || o.name === "campfire" || o.name === "house");
+            tile.updateTraversable();
         }
         else if (cmd === 3) { // Fence
             tile.worldObjects = [new WorldObject("fence")];
             tile.items = [];
+            tile.updateTraversable();
         }
         else if (cmd >= 4 && cmd <= 9) { // Entities
             tile.entities = [];
@@ -254,6 +368,7 @@ function init() {
             if (ent) {
                 tile.addEntity(ent);
                 entities.push({ entity: ent, pos: Vector2(gx, gy) });
+                incrementEntityCount(ent);
             }
         }
     }
@@ -698,16 +813,20 @@ function mainProcess() {
         // Draw path tile highlights for all entities inside the viewport
         ctx.fillStyle = "rgba(255, 255, 0, 0.4)";
         ctx.beginPath();
-        for (var i = 0; i < entities.length; i++) {
-            var ent = entities[i];
-            var e = ent.entity;
-            var path = e.moveQueue;
-            for (var p = 0; p < path.length; p++) {
-                var node = path[p];
-                if (node.x >= viewStartX && node.x < viewEndX && node.y >= viewStartY && node.y < viewEndY) {
-                    var screenX = Math.round((node.x - CAMERA_OFFSET.x) * TILE_SIZE);
-                    var screenY = Math.round((node.y - CAMERA_OFFSET.y) * TILE_SIZE);
-                    ctx.rect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+        for (var x = Math.max(0, viewStartX); x <= Math.min(X_TILES - 1, viewEndX); x++) {
+            for (var y = Math.max(0, viewStartY); y <= Math.min(Y_TILES - 1, viewEndY); y++) {
+                var tileEntities = world[x][y].entities;
+                for (var i = 0; i < tileEntities.length; i++) {
+                    var e = tileEntities[i];
+                    var path = e.moveQueue;
+                    for (var p = 0; p < path.length; p++) {
+                        var node = path[p];
+                        if (node.x >= viewStartX && node.x < viewEndX && node.y >= viewStartY && node.y < viewEndY) {
+                            var screenX = Math.round((node.x - CAMERA_OFFSET.x) * TILE_SIZE);
+                            var screenY = Math.round((node.y - CAMERA_OFFSET.y) * TILE_SIZE);
+                            ctx.rect(screenX, screenY, TILE_SIZE, TILE_SIZE);
+                        }
+                    }
                 }
             }
         }
@@ -716,16 +835,17 @@ function mainProcess() {
         ctx.strokeStyle = "rgba(0, 255, 204, 0.25)";
         ctx.lineWidth = 1.5;
         ctx.beginPath();
-        for (var i = 0; i < entities.length; i++) {
-            var ent = entities[i];
-            var pos = ent.pos;
-            if (pos.x >= viewStartX && pos.x < viewEndX && pos.y >= viewStartY && pos.y < viewEndY) {
-                var screenX = Math.round((pos.x - CAMERA_OFFSET.x) * TILE_SIZE);
-                var screenY = Math.round((pos.y - CAMERA_OFFSET.y) * TILE_SIZE);
-                // Draw concentric square search rings matching the Chebyshev distance search pattern
-                ctx.rect(screenX - 3 * TILE_SIZE, screenY - 3 * TILE_SIZE, 7 * TILE_SIZE, 7 * TILE_SIZE);
-                ctx.rect(screenX - 6 * TILE_SIZE, screenY - 6 * TILE_SIZE, 13 * TILE_SIZE, 13 * TILE_SIZE);
-                ctx.rect(screenX - 10 * TILE_SIZE, screenY - 10 * TILE_SIZE, 21 * TILE_SIZE, 21 * TILE_SIZE);
+        for (var x = Math.max(0, viewStartX); x <= Math.min(X_TILES - 1, viewEndX); x++) {
+            for (var y = Math.max(0, viewStartY); y <= Math.min(Y_TILES - 1, viewEndY); y++) {
+                var tileEntities = world[x][y].entities;
+                for (var i = 0; i < tileEntities.length; i++) {
+                    var screenX = Math.round((x - CAMERA_OFFSET.x) * TILE_SIZE);
+                    var screenY = Math.round((y - CAMERA_OFFSET.y) * TILE_SIZE);
+                    // Draw concentric square search rings matching the Chebyshev distance search pattern
+                    ctx.rect(screenX - 3 * TILE_SIZE, screenY - 3 * TILE_SIZE, 7 * TILE_SIZE, 7 * TILE_SIZE);
+                    ctx.rect(screenX - 6 * TILE_SIZE, screenY - 6 * TILE_SIZE, 13 * TILE_SIZE, 13 * TILE_SIZE);
+                    ctx.rect(screenX - 10 * TILE_SIZE, screenY - 10 * TILE_SIZE, 21 * TILE_SIZE, 21 * TILE_SIZE);
+                }
             }
         }
         ctx.stroke();
@@ -734,20 +854,23 @@ function mainProcess() {
         ctx.lineWidth = 2.5;
         ctx.setLineDash([6, 3]);
         ctx.beginPath();
-        for (var i = 0; i < entities.length; i++) {
-            var ent = entities[i];
-            var e = ent.entity;
-            var pos = ent.pos;
-            var path = e.moveQueue;
-            if (path.length > 0) {
-                var startX = Math.round((pos.x - CAMERA_OFFSET.x) * TILE_SIZE) + TILE_SIZE / 2;
-                var startY = Math.round((pos.y - CAMERA_OFFSET.y) * TILE_SIZE) + TILE_SIZE / 2;
-                ctx.moveTo(startX, startY);
-                for (var p = 0; p < path.length; p++) {
-                    var node = path[p];
-                    var nextX = Math.round((node.x - CAMERA_OFFSET.x) * TILE_SIZE) + TILE_SIZE / 2;
-                    var nextY = Math.round((node.y - CAMERA_OFFSET.y) * TILE_SIZE) + TILE_SIZE / 2;
-                    ctx.lineTo(nextX, nextY);
+        for (var x = Math.max(0, viewStartX); x <= Math.min(X_TILES - 1, viewEndX); x++) {
+            for (var y = Math.max(0, viewStartY); y <= Math.min(Y_TILES - 1, viewEndY); y++) {
+                var tileEntities = world[x][y].entities;
+                for (var i = 0; i < tileEntities.length; i++) {
+                    var e = tileEntities[i];
+                    var path = e.moveQueue;
+                    if (path.length > 0) {
+                        var startX = Math.round((x - CAMERA_OFFSET.x) * TILE_SIZE) + TILE_SIZE / 2;
+                        var startY = Math.round((y - CAMERA_OFFSET.y) * TILE_SIZE) + TILE_SIZE / 2;
+                        ctx.moveTo(startX, startY);
+                        for (var p = 0; p < path.length; p++) {
+                            var node = path[p];
+                            var nextX = Math.round((node.x - CAMERA_OFFSET.x) * TILE_SIZE) + TILE_SIZE / 2;
+                            var nextY = Math.round((node.y - CAMERA_OFFSET.y) * TILE_SIZE) + TILE_SIZE / 2;
+                            ctx.lineTo(nextX, nextY);
+                        }
+                    }
                 }
             }
         }
@@ -761,89 +884,95 @@ function mainProcess() {
         var srcW = Math.round((CANVAS_WIDTH / TILE_SIZE) * BASE_TILE_SIZE);
         var srcH = Math.round((CANVAS_HEIGHT / TILE_SIZE) * BASE_TILE_SIZE);
         ctx.drawImage(offscreenCanvas, srcX, srcY, srcW, srcH, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-        // Viewport culling loop over active entities (O(N) instead of scanning the full 2,304 tile grid)
-        for (var i = 0; i < entities.length; i++) {
-            var ent = entities[i];
-            var pos = ent.pos;
-            if (pos.x >= viewStartX && pos.x < viewEndX && pos.y >= viewStartY && pos.y < viewEndY) {
-                var e = ent.entity;
-                var screenX = Math.round((pos.x - CAMERA_OFFSET.x) * TILE_SIZE);
-                var screenY = Math.round((pos.y - CAMERA_OFFSET.y) * TILE_SIZE);
-                var cx = screenX + TILE_SIZE / 2;
-                var cy = screenY + TILE_SIZE / 2;
-                if (e.id === inspectedHouseOwnerId) {
-                    ctx.beginPath();
-                    ctx.arc(cx, cy, TILE_SIZE * 0.8, 0, Math.PI * 2);
-                    ctx.fillStyle = "rgba(255, 255, 0, 0.5)";
-                    ctx.fill();
-                    ctx.strokeStyle = "yellow";
-                    ctx.lineWidth = 2;
-                    ctx.stroke();
+        // Viewport culling loop over active tiles (O(V) instead of O(N) over all entities)
+        // Skip entity drawing when zoomed out so far that entities are sub-pixel
+        if (TILE_SIZE >= 4) {
+            var entityFont = `bold ${Math.max(6, Math.round(TILE_SIZE * 0.6))}px sans-serif`;
+            for (var x = Math.max(0, viewStartX); x <= Math.min(X_TILES - 1, viewEndX); x++) {
+                for (var y = Math.max(0, viewStartY); y <= Math.min(Y_TILES - 1, viewEndY); y++) {
+                    var tileEntities = world[x][y].entities;
+                    for (var i = 0; i < tileEntities.length; i++) {
+                        var e = tileEntities[i];
+                        var screenX = Math.round((x - CAMERA_OFFSET.x) * TILE_SIZE);
+                        var screenY = Math.round((y - CAMERA_OFFSET.y) * TILE_SIZE);
+                        var cx = screenX + TILE_SIZE / 2;
+                        var cy = screenY + TILE_SIZE / 2;
+                        if (e.id === inspectedHouseOwnerId) {
+                            ctx.beginPath();
+                            ctx.arc(cx, cy, TILE_SIZE * 0.8, 0, Math.PI * 2);
+                            ctx.fillStyle = "rgba(255, 255, 0, 0.5)";
+                            ctx.fill();
+                            ctx.strokeStyle = "yellow";
+                            ctx.lineWidth = 2;
+                            ctx.stroke();
+                        }
+                        // Draw entity background circle for high aesthetic readability
+                        ctx.beginPath();
+                        ctx.arc(cx, cy, TILE_SIZE * 0.42, 0, Math.PI * 2);
+                        var eType = e.entityType;
+                        if (eType === ENTITY_TYPE_WOODCUTTER) {
+                            ctx.fillStyle = "#ff7b7b"; // Soft red
+                        }
+                        else if (eType === ENTITY_TYPE_FISHERMAN) {
+                            ctx.fillStyle = "#7bc0ff"; // Soft blue
+                        }
+                        else if (eType === ENTITY_TYPE_MINER) {
+                            ctx.fillStyle = "#d0d0d0"; // Soft grey
+                        }
+                        else if (eType === ENTITY_TYPE_FARMER) {
+                            ctx.fillStyle = "#e5ff82"; // Soft yellow-green
+                        }
+                        else if (eType === ENTITY_TYPE_SHEEP) {
+                            ctx.fillStyle = "#ffffff"; // Soft white
+                        }
+                        else if (eType === ENTITY_TYPE_COW) {
+                            ctx.fillStyle = "#f5f5f5"; // Off-white
+                        }
+                        else if (eType === ENTITY_TYPE_WOLF) {
+                            ctx.fillStyle = "#666666"; // Dark grey
+                        }
+                        else {
+                            ctx.fillStyle = "#ffdd80"; // Peach
+                        }
+                        ctx.fill();
+                        ctx.strokeStyle = "rgba(0,0,0,0.5)";
+                        ctx.lineWidth = 1;
+                        ctx.stroke();
+                        // Draw black cow spots procedurally
+                        if (eType === ENTITY_TYPE_COW) {
+                            ctx.fillStyle = "#333333";
+                            ctx.beginPath();
+                            ctx.arc(cx - TILE_SIZE * 0.18, cy - TILE_SIZE * 0.15, TILE_SIZE * 0.12, 0, Math.PI * 2);
+                            ctx.arc(cx + TILE_SIZE * 0.2, cy + TILE_SIZE * 0.12, TILE_SIZE * 0.14, 0, Math.PI * 2);
+                            ctx.arc(cx - TILE_SIZE * 0.05, cy + TILE_SIZE * 0.2, TILE_SIZE * 0.1, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+                        // Build entity text display
+                        var letter = "?";
+                        var textCol = "black";
+                        if (e instanceof Human && e.professionLetter != "") {
+                            letter = e.professionLetter;
+                        }
+                        else if (eType === ENTITY_TYPE_SHEEP) {
+                            letter = "S";
+                        }
+                        else if (eType === ENTITY_TYPE_COW) {
+                            letter = "C";
+                            textCol = "#111111";
+                        }
+                        else if (eType === ENTITY_TYPE_WOLF) {
+                            letter = "X";
+                            textCol = "#ff2222"; // Red X for wolf
+                        }
+                        textValDraws.push(letter);
+                        textXDraws.push(cx);
+                        textYDraws.push(cy + TILE_SIZE * 0.23);
+                        textColorDraws.push(textCol);
+                        textFontDraws.push(entityFont);
+                    }
                 }
-                // Draw entity background circle for high aesthetic readability
-                ctx.beginPath();
-                ctx.arc(cx, cy, TILE_SIZE * 0.42, 0, Math.PI * 2);
-                if (e instanceof Woodcutter) {
-                    ctx.fillStyle = "#ff7b7b"; // Soft red
-                }
-                else if (e instanceof Fisherman) {
-                    ctx.fillStyle = "#7bc0ff"; // Soft blue
-                }
-                else if (e.constructor.name === "Miner") {
-                    ctx.fillStyle = "#d0d0d0"; // Soft grey
-                }
-                else if (e.constructor.name === "Farmer") {
-                    ctx.fillStyle = "#e5ff82"; // Soft yellow-green
-                }
-                else if (e.constructor.name === "Sheep") {
-                    ctx.fillStyle = "#ffffff"; // Soft white
-                }
-                else if (e.constructor.name === "Cow") {
-                    ctx.fillStyle = "#f5f5f5"; // Off-white
-                }
-                else if (e.constructor.name === "Wolf") {
-                    ctx.fillStyle = "#666666"; // Dark grey
-                }
-                else {
-                    ctx.fillStyle = "#ffdd80"; // Peach
-                }
-                ctx.fill();
-                ctx.strokeStyle = "rgba(0,0,0,0.5)";
-                ctx.lineWidth = 1;
-                ctx.stroke();
-                // Draw black cow spots procedurally
-                if (e.constructor.name === "Cow") {
-                    ctx.fillStyle = "#333333";
-                    ctx.beginPath();
-                    ctx.arc(cx - TILE_SIZE * 0.18, cy - TILE_SIZE * 0.15, TILE_SIZE * 0.12, 0, Math.PI * 2);
-                    ctx.arc(cx + TILE_SIZE * 0.2, cy + TILE_SIZE * 0.12, TILE_SIZE * 0.14, 0, Math.PI * 2);
-                    ctx.arc(cx - TILE_SIZE * 0.05, cy + TILE_SIZE * 0.2, TILE_SIZE * 0.1, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-                // Build entity text display
-                var letter = "?";
-                var textCol = "black";
-                if (e instanceof Human && e.professionLetter != "") {
-                    letter = e.professionLetter;
-                }
-                else if (e.constructor.name === "Sheep") {
-                    letter = "S";
-                }
-                else if (e.constructor.name === "Cow") {
-                    letter = "C";
-                    textCol = "#111111";
-                }
-                else if (e.constructor.name === "Wolf") {
-                    letter = "X";
-                    textCol = "#ff2222"; // Red X for wolf
-                }
-                textValDraws.push(letter);
-                textXDraws.push(cx);
-                textYDraws.push(cy + TILE_SIZE * 0.23);
-                textColorDraws.push(textCol);
-                textFontDraws.push(`bold ${Math.max(6, Math.round(TILE_SIZE * 0.6))}px sans-serif`);
             }
-        }
+        } // end TILE_SIZE >= 4 check
     }
     // Draw all letters and item counts
     if (textValDraws.length > 0) {
@@ -888,9 +1017,23 @@ function mainProcess() {
                         e.stateText = "Dead (Old Age)";
                     }
                     var oldTile = world[pos.x][pos.y];
-                    oldTile.removeEntity(oldTile.entities.indexOf(e));
-                    entities.splice(i, 1);
+                    var tileIdx = oldTile.entities.indexOf(e);
+                    if (tileIdx !== -1) {
+                        // Swap-and-pop for tile entities array
+                        var lastIdx = oldTile.entities.length - 1;
+                        if (tileIdx !== lastIdx) {
+                            oldTile.entities[tileIdx] = oldTile.entities[lastIdx];
+                        }
+                        oldTile.entities.length = lastIdx;
+                    }
+                    // Swap-and-pop for global entities array (O(1) instead of O(N) splice)
+                    var lastGlobal = entities.length - 1;
+                    if (i !== lastGlobal) {
+                        entities[i] = entities[lastGlobal];
+                    }
+                    entities.length = lastGlobal;
                     i--;
+                    decrementEntityCount(e);
                     //@ts-ignore
                     if (typeof TestTools !== "undefined") {
                         //@ts-ignore
@@ -905,10 +1048,18 @@ function mainProcess() {
                     }
                     continue;
                 }
-                e.process();
                 // Movement handler (Staggered to distribute heavy pathfinding load across speedGene-based frames)
-                var moveDelay = Math.round(15 * (e.genome ? e.genome.speedGene : 1.0));
-                if (e.move != null && (ticks + i) % moveDelay == 0) {
+                if (e.moveDelay === undefined) {
+                    var baseDelay = 15;
+                    if (entities.length > 30000)
+                        baseDelay = 60;
+                    else if (entities.length > 20000)
+                        baseDelay = 30;
+                    else if (entities.length > 10000)
+                        baseDelay = 20;
+                    e.moveDelay = Math.round(baseDelay * (e.genome ? e.genome.speedGene : 1.0));
+                }
+                if (e.move != null && (ticks + i) % e.moveDelay == 0) {
                     var direction = e.move(pos.x, pos.y);
                     if (direction.x != 0 || direction.y != 0) {
                         var targetX = pos.x + direction.x;
@@ -918,7 +1069,15 @@ function mainProcess() {
                             var moveSuccess = targetTile.addEntity(e);
                             if (moveSuccess) {
                                 var oldTile = world[pos.x][pos.y];
-                                oldTile.removeEntity(oldTile.entities.indexOf(e)); // Removes the entity from the tile
+                                var rmIdx = oldTile.entities.indexOf(e);
+                                if (rmIdx !== -1) {
+                                    // Swap-and-pop for tile entity removal
+                                    var lastIdx = oldTile.entities.length - 1;
+                                    if (rmIdx !== lastIdx) {
+                                        oldTile.entities[rmIdx] = oldTile.entities[lastIdx];
+                                    }
+                                    oldTile.entities.length = lastIdx;
+                                }
                                 pos.x = targetX;
                                 pos.y = targetY;
                             }
@@ -942,41 +1101,55 @@ function mainProcess() {
             // Rescue Spawner to prevent total extinction (runs every 300 ticks)
             if (ticks % 300 === 0) {
                 // 1. Human Village Extinction Rescue
-                for (let thPos of townHallPositions) {
-                    let villageHumans = entities.filter(d => d.entity instanceof Human &&
-                        Math.max(Math.abs(d.pos.x - thPos.x), Math.abs(d.pos.y - thPos.y)) <= 45);
-                    if (villageHumans.length < 2 && entities.length < MAX_ENTITIES_LIMIT) {
-                        let spawned = false;
-                        for (let dx = -2; dx <= 2 && !spawned; dx++) {
-                            for (let dy = -2; dy <= 2 && !spawned; dy++) {
-                                if (dx === 0 && dy === 0)
-                                    continue;
-                                let vx = thPos.x + dx;
-                                let vy = thPos.y + dy;
-                                if (world[vx] && world[vx][vy]) {
-                                    let tile = world[vx][vy];
-                                    if (tile.canBeTraversed() && tile.entities.length < TILE_ENTITY_LIMIT && tile.worldObjects.length === 0) {
-                                        let roll = Math.floor(Math.random() * 4);
-                                        let villager;
-                                        if (roll === 0)
-                                            villager = new Woodcutter();
-                                        else if (roll === 1)
-                                            villager = new Fisherman();
-                                        else if (roll === 2) {
+                var totalHumans = entityCounts.woodcutter + entityCounts.fisherman + entityCounts.miner + entityCounts.farmer;
+                if (totalHumans < townHallPositions.length * 4) {
+                    // Only do per-village checks when human count is very low
+                    for (let thIdx = 0; thIdx < townHallPositions.length; thIdx++) {
+                        let thPos = townHallPositions[thIdx];
+                        // Count nearby humans with a quick scan of entities near this town hall
+                        let nearbyHumans = 0;
+                        for (let ei = 0; ei < entities.length && nearbyHumans < 2; ei++) {
+                            var d = entities[ei];
+                            if (d.entity instanceof Human &&
+                                Math.abs(d.pos.x - thPos.x) <= 45 &&
+                                Math.abs(d.pos.y - thPos.y) <= 45) {
+                                nearbyHumans++;
+                            }
+                        }
+                        if (nearbyHumans < 2 && entities.length < MAX_ENTITIES_LIMIT) {
+                            let spawned = false;
+                            for (let dx = -2; dx <= 2 && !spawned; dx++) {
+                                for (let dy = -2; dy <= 2 && !spawned; dy++) {
+                                    if (dx === 0 && dy === 0)
+                                        continue;
+                                    let vx = thPos.x + dx;
+                                    let vy = thPos.y + dy;
+                                    if (world[vx] && world[vx][vy]) {
+                                        let tile = world[vx][vy];
+                                        if (tile.canBeTraversed() && tile.entities.length < TILE_ENTITY_LIMIT && tile.worldObjects.length === 0) {
+                                            let roll = Math.floor(Math.random() * 4);
+                                            let villager;
+                                            if (roll === 0)
+                                                villager = new Woodcutter();
+                                            else if (roll === 1)
+                                                villager = new Fisherman();
+                                            else if (roll === 2) {
+                                                //@ts-ignore
+                                                villager = new Miner();
+                                            }
+                                            else {
+                                                //@ts-ignore
+                                                villager = new Farmer();
+                                            }
+                                            tile.addEntity(villager);
+                                            entities.push({ entity: villager, pos: Vector2(vx, vy) });
+                                            incrementEntityCount(villager);
+                                            spawned = true;
                                             //@ts-ignore
-                                            villager = new Miner();
-                                        }
-                                        else {
-                                            //@ts-ignore
-                                            villager = new Farmer();
-                                        }
-                                        tile.addEntity(villager);
-                                        entities.push({ entity: villager, pos: Vector2(vx, vy) });
-                                        spawned = true;
-                                        //@ts-ignore
-                                        if (typeof TestTools !== "undefined") {
-                                            //@ts-ignore
-                                            TestTools.updateStats();
+                                            if (typeof TestTools !== "undefined") {
+                                                //@ts-ignore
+                                                TestTools.updateStats();
+                                            }
                                         }
                                     }
                                 }
@@ -984,35 +1157,49 @@ function mainProcess() {
                         }
                     }
                 }
-                // 2. Wild Animals Extinction Rescue
-                let sheepCount = entities.filter(d => d.entity.constructor.name === "Sheep").length;
-                let cowCount = entities.filter(d => d.entity.constructor.name === "Cow").length;
-                let wolfCount = entities.filter(d => d.entity.constructor.name === "Wolf").length;
-                if (sheepCount < 15 && entities.length < MAX_ENTITIES_LIMIT) {
+                // 2. Wild Animals Extinction Rescue (using cached counters — O(1))
+                if (entityCounts.sheep < 15 && entities.length < MAX_ENTITIES_LIMIT) {
                     spawnWildAnimalPair("Sheep");
                 }
-                if (cowCount < 15 && entities.length < MAX_ENTITIES_LIMIT) {
+                if (entityCounts.cow < 15 && entities.length < MAX_ENTITIES_LIMIT) {
                     spawnWildAnimalPair("Cow");
                 }
-                if (wolfCount < 8 && entities.length < MAX_ENTITIES_LIMIT) {
+                if (entityCounts.wolf < 8 && entities.length < MAX_ENTITIES_LIMIT) {
                     spawnWildAnimalPair("Wolf");
                 }
             }
             // Resource Regeneration (runs every 100 ticks)
             if (ticks % 100 === 0) {
-                for (let k = 0; k < 50; k++) {
-                    let rx = Math.floor(Math.random() * X_TILES);
-                    let ry = Math.floor(Math.random() * Y_TILES);
-                    if (world[rx] && world[rx][ry]) {
-                        let tile = world[rx][ry];
-                        if (tile.entities.length === 0 && tile.worldObjects.length === 0 && tile.items.length === 0) {
-                            tile.spawnResources();
-                            if (tile.worldObjects.length > 0 || tile.items.length > 0) {
-                                //@ts-ignore
-                                if (typeof drawTileToOffscreen === "function") {
-                                    drawTileToOffscreen(rx, ry);
-                                }
-                            }
+                wasmExports.regenerateResourcesWasm(RESOURCE_SPAWN_MULTIPLIER);
+                // Temporary sync back to JS WorldTile until Phase 2 is complete
+                const OBJ_NAMES = [
+                    "", "tree", "pine_tree", "palm_tree", "cactus", "shrub", "wheat", "reed",
+                    "stone", "campfire", "town_hall", "house", "storage_pile", "fence", "fish"
+                ];
+                const ITEM_NAMES = [
+                    "", "Apple", "Berry", "Shell", "Wood"
+                ];
+                var objPtr = wasmExports.getTileObjectPointer();
+                var objArr = new Int32Array(wasmMemory.buffer, objPtr, X_TILES * Y_TILES);
+                var itemPtr = wasmExports.getTileItemPointer();
+                var itemArr = new Int32Array(wasmMemory.buffer, itemPtr, X_TILES * Y_TILES);
+                for (let x = 0; x < X_TILES; x++) {
+                    for (let y = 0; y < Y_TILES; y++) {
+                        let idx = x * Y_TILES + y;
+                        let tile = world[x][y];
+                        let objId = objArr[idx];
+                        if (objId > 0 && tile.worldObjects.length === 0) {
+                            tile.worldObjects.push(new WorldObject(OBJ_NAMES[objId]));
+                            //@ts-ignore
+                            if (typeof drawTileToOffscreen === "function")
+                                drawTileToOffscreen(x, y);
+                        }
+                        let itemId = itemArr[idx];
+                        if (itemId > 0 && tile.items.length === 0) {
+                            tile.items.push(new Item(ITEM_NAMES[itemId]));
+                            //@ts-ignore
+                            if (typeof drawTileToOffscreen === "function")
+                                drawTileToOffscreen(x, y);
                         }
                     }
                 }
@@ -1109,8 +1296,10 @@ function spawnWildAnimalPair(type) {
                     }
                     tile.addEntity(animal1);
                     entities.push({ entity: animal1, pos: Vector2(rx, ry) });
+                    incrementEntityCount(animal1);
                     partnerTile.addEntity(animal2);
                     entities.push({ entity: animal2, pos: Vector2(px, py) });
+                    incrementEntityCount(animal2);
                     spawned = true;
                     //@ts-ignore
                     if (typeof TestTools !== "undefined") {

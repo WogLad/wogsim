@@ -4,6 +4,7 @@ class Woodcutter extends Human {
         super("W", customGenome);
         /** The radius of the search square that is used to find the human's next position */
         this.radarLength = 10; // TODO: Add a stroke rect in the debug draw function to show the radar of the human
+        this.entityType = ENTITY_TYPE_WOODCUTTER;
         this.addToInventory(new Tool("Stone Axe"));
         // DONE: Return the position of a tree if close to any
         this.professionMover = (currentX, currentY) => {

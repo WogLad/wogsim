@@ -1,10 +1,20 @@
 "use strict";
+// Entity type constants for fast type identification (avoids constructor.name string comparison)
+const ENTITY_TYPE_UNKNOWN = 0;
+const ENTITY_TYPE_WOODCUTTER = 1;
+const ENTITY_TYPE_FISHERMAN = 2;
+const ENTITY_TYPE_MINER = 3;
+const ENTITY_TYPE_FARMER = 4;
+const ENTITY_TYPE_SHEEP = 5;
+const ENTITY_TYPE_COW = 6;
+const ENTITY_TYPE_WOLF = 7;
 /**
  * The base class that all the entities inherit their components and behaviour from.
  */
 class Entity {
     constructor(living, movable, viewColor, customGenome) {
-        this.id = crypto.randomUUID();
+        this.id = (Entity._nextId++).toString(36);
+        this.entityType = ENTITY_TYPE_UNKNOWN;
         this.ticksAlive = 0;
         this.maxAge = 20000; // Max lifespan in ticks (scaled by lifespanGene)
         this.lastPathfindTime = 0;
@@ -17,6 +27,7 @@ class Entity {
         this.lastMatingTick = 0;
         this.matingCooldown = 4000;
         this.moveQueue = [];
+        this.moveQueueIndex = 0;
         this.inventory = [];
         this.process = () => { }; // Called every frame
         this.move = (currentX, currentY) => { return Vector2(0, 0); }; // Called every frame to move the entity if possible
@@ -88,6 +99,7 @@ class Entity {
     moveTo(startPos, endPos) {
         //@ts-ignore
         this.moveQueue = findWasmPath(startPos.x, startPos.y, endPos.x, endPos.y);
+        this.moveQueueIndex = 0;
     }
     getRandomPos(currentX, currentY, radius = 10) {
         for (let attempt = 0; attempt < 30; attempt++) {
@@ -129,11 +141,17 @@ class Entity {
         if (centerTile && predicate(centerTile, currentX, currentY)) {
             return Vector2(currentX, currentY);
         }
+        var xMin = Math.max(0, currentX - maxRadius);
+        var xMax = Math.min(X_TILES - 1, currentX + maxRadius);
+        var yMin = Math.max(0, currentY - maxRadius);
+        var yMax = Math.min(Y_TILES - 1, currentY + maxRadius);
         for (var d = 1; d <= maxRadius; d++) {
             // 1. Top row: y = currentY - d, x from currentX - d to currentX + d
             var y = currentY - d;
-            for (var x = currentX - d; x <= currentX + d; x++) {
-                if (world[x] !== undefined && world[x][y] !== undefined) {
+            if (y >= yMin) {
+                var rowXMin = Math.max(xMin, currentX - d);
+                var rowXMax = Math.min(xMax, currentX + d);
+                for (var x = rowXMin; x <= rowXMax; x++) {
                     if (predicate(world[x][y], x, y)) {
                         return Vector2(x, y);
                     }
@@ -141,8 +159,10 @@ class Entity {
             }
             // 2. Bottom row: y = currentY + d, x from currentX - d to currentX + d
             y = currentY + d;
-            for (var x = currentX - d; x <= currentX + d; x++) {
-                if (world[x] !== undefined && world[x][y] !== undefined) {
+            if (y <= yMax) {
+                var rowXMin = Math.max(xMin, currentX - d);
+                var rowXMax = Math.min(xMax, currentX + d);
+                for (var x = rowXMin; x <= rowXMax; x++) {
                     if (predicate(world[x][y], x, y)) {
                         return Vector2(x, y);
                     }
@@ -150,23 +170,23 @@ class Entity {
             }
             // 3. Left column: x = currentX - d, y from currentY - d + 1 to currentY + d - 1
             var x = currentX - d;
-            if (world[x] !== undefined) {
-                for (var yVal = currentY - d + 1; yVal <= currentY + d - 1; yVal++) {
-                    if (world[x][yVal] !== undefined) {
-                        if (predicate(world[x][yVal], x, yVal)) {
-                            return Vector2(x, yVal);
-                        }
+            if (x >= xMin) {
+                var colYMin = Math.max(yMin, currentY - d + 1);
+                var colYMax = Math.min(yMax, currentY + d - 1);
+                for (var yVal = colYMin; yVal <= colYMax; yVal++) {
+                    if (predicate(world[x][yVal], x, yVal)) {
+                        return Vector2(x, yVal);
                     }
                 }
             }
             // 4. Right column: x = currentX + d, y from currentY - d + 1 to currentY + d - 1
             x = currentX + d;
-            if (world[x] !== undefined) {
-                for (var yVal = currentY - d + 1; yVal <= currentY + d - 1; yVal++) {
-                    if (world[x][yVal] !== undefined) {
-                        if (predicate(world[x][yVal], x, yVal)) {
-                            return Vector2(x, yVal);
-                        }
+            if (x <= xMax) {
+                var colYMin = Math.max(yMin, currentY - d + 1);
+                var colYMax = Math.min(yMax, currentY + d - 1);
+                for (var yVal = colYMin; yVal <= colYMax; yVal++) {
+                    if (predicate(world[x][yVal], x, yVal)) {
+                        return Vector2(x, yVal);
                     }
                 }
             }
@@ -174,3 +194,4 @@ class Entity {
         return null;
     }
 }
+Entity._nextId = 1;

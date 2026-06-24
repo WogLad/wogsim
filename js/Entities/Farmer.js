@@ -4,6 +4,7 @@ class Farmer extends Human {
         super("P", customGenome);
         /** The radius of the search square that is used to find the human's next position */
         this.radarLength = 10;
+        this.entityType = ENTITY_TYPE_FARMER;
         this.addToInventory(new Tool("Hoe"));
         this.professionMover = (currentX, currentY) => {
             var currentTile = world[currentX][currentY];

@@ -4,9 +4,14 @@ export var X_TILES: i32 = 0;
 export var Y_TILES: i32 = 0;
 export var GRID_SIZE: i32 = 0;
 
-// We will use a flat array to represent the grid. 
-// 0 = wall/water, > 0 = walk weight (1 for standard ground)
-export var grid: Float32Array = new Float32Array(0);
+// We will use flat arrays to represent the grid.
+export var grid: Float32Array = new Float32Array(0); // pathfinding weight
+
+// Tile data
+export var tile_type: Int32Array = new Int32Array(0);
+export var tile_object: Int32Array = new Int32Array(0);
+export var tile_item: Int32Array = new Int32Array(0);
+export var tile_entity_count: Int32Array = new Int32Array(0);
 
 export function setGridWeight(x: i32, y: i32, weight: f32): void {
   if (x >= 0 && x < X_TILES && y >= 0 && y < Y_TILES) {
@@ -19,6 +24,22 @@ export function getGridWeight(x: i32, y: i32): f32 {
     return grid[x * Y_TILES + y];
   }
   return 0.0;
+}
+
+export function getTileTypePointer(): usize {
+  return tile_type.dataStart;
+}
+
+export function getTileObjectPointer(): usize {
+  return tile_object.dataStart;
+}
+
+export function getTileItemPointer(): usize {
+  return tile_item.dataStart;
+}
+
+export function getTileEntityCountPointer(): usize {
+  return tile_entity_count.dataStart;
 }
 
 // A* Node struct flattened for performance
@@ -42,6 +63,11 @@ export function initWorld(xTiles: i32, yTiles: i32): void {
   GRID_SIZE = xTiles * yTiles;
 
   grid = new Float32Array(GRID_SIZE);
+  tile_type = new Int32Array(GRID_SIZE);
+  tile_object = new Int32Array(GRID_SIZE);
+  tile_item = new Int32Array(GRID_SIZE);
+  tile_entity_count = new Int32Array(GRID_SIZE);
+  
   node_g = new Float32Array(GRID_SIZE);
   node_h = new Float32Array(GRID_SIZE);
   node_f = new Float32Array(GRID_SIZE);
@@ -270,3 +296,6 @@ export function findPath(startX: i32, startY: i32, endX: i32, endY: i32): boolea
   return false;
 }
 export * from "./worldgen";
+export * from "./regenerate";
+export * from "./entities";
+export * from "./ai";

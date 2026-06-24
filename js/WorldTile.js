@@ -12,20 +12,7 @@ var TileType;
     TileType["SWAMP"] = "#2F4F4F";
     TileType["SNOW"] = "#FFFFFF";
 })(TileType || (TileType = {}));
-function getFBM(x, y, octaves, persistence, lacunarity, scale) {
-    let total = 0;
-    let frequency = scale;
-    let amplitude = 1.0;
-    let maxValue = 0;
-    for (let i = 0; i < octaves; i++) {
-        //@ts-ignore
-        total += perlin.get(x * frequency, y * frequency) * amplitude;
-        maxValue += amplitude;
-        amplitude *= persistence;
-        frequency *= lacunarity;
-    }
-    return total / maxValue;
-}
+// perlin getFBM moved to WASM
 class WorldTile {
     constructor(x, y, type) {
         this.pos = Vector2(0, 0);
@@ -33,14 +20,30 @@ class WorldTile {
         this.entities = [];
         this.items = []; // DONE: Add objects that exist on tiles such as wheat or trees
         this.worldObjects = [];
+        this._traversable = true; // Cached traversability flag — updated via updateTraversable()
         if (type !== undefined) {
             this.pos = Vector2(x, y);
             this.type = type;
         }
         else {
-            this.setTileType(x, y); // Sets the type of tile
+            this.pos = Vector2(x, y);
+            this.type = TileType.GROUND; // default if not provided
         }
         this.spawnResources();
+        this.updateTraversable();
+    }
+    updateTraversable() {
+        if (this.type === TileType.WATER || this.type === TileType.DARK_WATER) {
+            this._traversable = false;
+            return;
+        }
+        for (var i = 0; i < this.worldObjects.length; i++) {
+            if (this.worldObjects[i].name === "fence") {
+                this._traversable = false;
+                return;
+            }
+        }
+        this._traversable = true;
     }
     spawnResources() {
         this.items = [];
@@ -130,49 +133,7 @@ class WorldTile {
         div.innerHTML = inspectorText;
         return div;
     }
-    /**
-     * Assigns a random tile type to the tile
-     */
-    setTileType(x, y) {
-        this.pos = Vector2(x, y);
-        // FBM parameters: x, y, octaves, persistence, lacunarity, scale
-        var elevation = getFBM(x, y, 4, 0.45, 2.1, 0.03);
-        var moisture = getFBM(x + 5000, y + 5000, 3, 0.5, 2.0, 0.03);
-        if (elevation < -0.3) {
-            this.type = TileType.DARK_WATER;
-        }
-        else if (elevation < -0.15) {
-            this.type = TileType.WATER;
-        }
-        else if (elevation < -0.08) {
-            this.type = TileType.SAND; // Beach/Sand
-        }
-        else if (elevation > 0.4) {
-            this.type = TileType.SNOW; // Mountain Peak
-        }
-        else {
-            // Land biomes
-            if (moisture < -0.2) {
-                this.type = TileType.DESERT;
-            }
-            else if (moisture < 0.2) {
-                if (elevation > 0.18) {
-                    this.type = TileType.GROUND; // Dry hills
-                }
-                else {
-                    this.type = TileType.GRASS; // Plains
-                }
-            }
-            else {
-                if (elevation < 0.05) {
-                    this.type = TileType.SWAMP; // Wetlands
-                }
-                else {
-                    this.type = TileType.DARK_GRASS; // Forest
-                }
-            }
-        }
-    }
+    // setTileType moved to WASM
     /**
      * Returns if the entity was successfully added to the tile or not
      */
@@ -200,12 +161,6 @@ class WorldTile {
         return this.type;
     }
     canBeTraversed() {
-        if ([TileType.WATER, TileType.DARK_WATER].includes(this.type)) {
-            return false;
-        }
-        if (this.worldObjects.some(o => o.name === "fence")) {
-            return false;
-        }
-        return true;
+        return this._traversable;
     }
 }

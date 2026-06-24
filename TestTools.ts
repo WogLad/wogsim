@@ -482,6 +482,8 @@ class TestTools {
 
             if (tile.addEntity(newEntity)) {
                 entities.push({ entity: newEntity, pos: Vector2(x, y) });
+                //@ts-ignore
+                incrementEntityCount(newEntity);
                 this.updateStats();
 
                 // Inspect the newly spawned entity
@@ -502,7 +504,14 @@ class TestTools {
             for (let i = entities.length - 1; i >= 0; i--) {
                 const ent = entities[i];
                 if (ent.pos.x === x && ent.pos.y === y) {
-                    entities.splice(i, 1);
+                    //@ts-ignore
+                    decrementEntityCount(ent.entity);
+                    // Swap-and-pop
+                    var lastIdx = entities.length - 1;
+                    if (i !== lastIdx) {
+                        entities[i] = entities[lastIdx];
+                    }
+                    entities.length = lastIdx;
                 }
             }
             tile.entities = [];
