@@ -277,7 +277,7 @@ class TestTools {
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Move Queue:</span>
-                    <span class="detail-val" id="liveInspectorQueue">${ent.moveQueue.length} nodes</span>
+                    <span class="detail-val" id="liveInspectorQueue">${ent.moveQueueLength} nodes</span>
                 </div>
                 <div class="detail-row">
                     <span class="detail-label">Radar Range:</span>
@@ -367,7 +367,7 @@ class TestTools {
         }
 
         const queueEl = document.getElementById("liveInspectorQueue");
-        if (queueEl) queueEl.innerText = `${ent.moveQueue.length} nodes`;
+        if (queueEl) queueEl.innerText = `${ent.moveQueueLength} nodes`;
 
         const inventoryEl = document.getElementById("liveInspectorInventory");
         if (inventoryEl) {

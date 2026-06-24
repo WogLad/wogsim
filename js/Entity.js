@@ -26,7 +26,8 @@ class Entity {
         this.ownsHouse = false;
         this.lastMatingTick = 0;
         this.matingCooldown = 4000;
-        this.moveQueue = [];
+        this.moveQueue = new Int32Array(200); // Stores flat x,y pairs. Max path 100 nodes.
+        this.moveQueueLength = 0;
         this.moveQueueIndex = 0;
         this.inventory = [];
         this.process = () => { }; // Called every frame
@@ -98,7 +99,7 @@ class Entity {
     }
     moveTo(startPos, endPos) {
         //@ts-ignore
-        this.moveQueue = findWasmPath(startPos.x, startPos.y, endPos.x, endPos.y);
+        this.moveQueueLength = findWasmPath(startPos.x, startPos.y, endPos.x, endPos.y, this.moveQueue);
         this.moveQueueIndex = 0;
     }
     getRandomPos(currentX, currentY, radius = 10) {

@@ -99,18 +99,22 @@ var world: WorldTile[][] = [];
 var wasmExports: any = null;
 var wasmMemory: WebAssembly.Memory | null = null;
 
-function findWasmPath(startX: number, startY: number, endX: number, endY: number): { x: number, y: number }[] {
-    if (!wasmExports || !wasmMemory) return [];
+function findWasmPath(startX: number, startY: number, endX: number, endY: number, outBuffer: Int32Array): number {
+    if (!wasmExports || !wasmMemory) return 0;
     var success = wasmExports.findPath(startX, startY, endX, endY);
-    if (!success) return [];
+    if (!success) return 0;
     var length = wasmExports.getResultPathLength();
+    if (length == 0) return 0;
+    
+    // Max length supported by outBuffer is outBuffer.length / 2
+    var safeLength = Math.min(length, Math.floor(outBuffer.length / 2));
     var ptr = wasmExports.getResultPathPointer();
-    var int32Array = new Int32Array(wasmMemory.buffer, ptr, length * 2);
-    var path: { x: number, y: number }[] = [];
-    for (var i = 0; i < length; i++) {
-        path.push({ x: int32Array[i * 2], y: int32Array[i * 2 + 1] });
-    }
-    return path;
+    
+    // Set the buffer natively without creating intermediate JS arrays
+    var wasmView = new Int32Array(wasmMemory.buffer, ptr, safeLength * 2);
+    outBuffer.set(wasmView, 0);
+    
+    return safeLength;
 }
 
 var sprites: Map<string, HTMLImageElement> = new Map<string, HTMLImageElement>();
@@ -836,12 +840,14 @@ function mainProcess(): void {
                 var tileEntities = world[x][y].entities;
                 for (var i = 0; i < tileEntities.length; i++) {
                     var e = tileEntities[i];
-                    var path = e.moveQueue;
-                    for (var p = 0; p < path.length; p++) {
-                        var node = path[p];
-                        if (node.x >= viewStartX && node.x < viewEndX && node.y >= viewStartY && node.y < viewEndY) {
-                            var screenX = Math.round((node.x - CAMERA_OFFSET.x) * TILE_SIZE);
-                            var screenY = Math.round((node.y - CAMERA_OFFSET.y) * TILE_SIZE);
+                    var pathBuffer = e.moveQueue;
+                    var pathLength = e.moveQueueLength;
+                    for (var p = 0; p < pathLength; p++) {
+                        var nodeX = pathBuffer[p * 2];
+                        var nodeY = pathBuffer[p * 2 + 1];
+                        if (nodeX >= viewStartX && nodeX < viewEndX && nodeY >= viewStartY && nodeY < viewEndY) {
+                            var screenX = Math.round((nodeX - CAMERA_OFFSET.x) * TILE_SIZE);
+                            var screenY = Math.round((nodeY - CAMERA_OFFSET.y) * TILE_SIZE);
                             ctx.rect(screenX, screenY, TILE_SIZE, TILE_SIZE);
                         }
                     }
@@ -880,16 +886,18 @@ function mainProcess(): void {
                 var tileEntities = world[x][y].entities;
                 for (var i = 0; i < tileEntities.length; i++) {
                     var e = tileEntities[i];
-                    var path = e.moveQueue;
-                    if (path.length > 0) {
+                    var pathBuffer = e.moveQueue;
+                    var pathLength = e.moveQueueLength;
+                    if (pathLength > 0) {
                         var startX = Math.round((x - CAMERA_OFFSET.x) * TILE_SIZE) + TILE_SIZE / 2;
                         var startY = Math.round((y - CAMERA_OFFSET.y) * TILE_SIZE) + TILE_SIZE / 2;
                         ctx.moveTo(startX, startY);
 
-                        for (var p = 0; p < path.length; p++) {
-                            var node = path[p];
-                            var nextX = Math.round((node.x - CAMERA_OFFSET.x) * TILE_SIZE) + TILE_SIZE / 2;
-                            var nextY = Math.round((node.y - CAMERA_OFFSET.y) * TILE_SIZE) + TILE_SIZE / 2;
+                        for (var p = 0; p < pathLength; p++) {
+                            var nodeX = pathBuffer[p * 2];
+                            var nodeY = pathBuffer[p * 2 + 1];
+                            var nextX = Math.round((nodeX - CAMERA_OFFSET.x) * TILE_SIZE) + TILE_SIZE / 2;
+                            var nextY = Math.round((nodeY - CAMERA_OFFSET.y) * TILE_SIZE) + TILE_SIZE / 2;
                             ctx.lineTo(nextX, nextY);
                         }
                     }

@@ -33,10 +33,13 @@ class SaveManager {
         //@ts-ignore
         for (let entry of entities) {
             let ent = entry.entity;
+            const entData = Object.assign({}, ent);
+            delete entData.moveQueue;
+            delete entData.moveQueueLength;
             flatEntities.push({
                 className: ent.constructor.name,
                 pos: entry.pos,
-                data: ent // This copies all scalar fields, plus genome and inventory
+                data: entData // This copies all scalar fields, plus genome and inventory
             });
         }
         const saveData = {
@@ -138,6 +141,13 @@ class SaveManager {
                     continue;
                 }
                 let ent = new EntClass();
+                // Ensure legacy/unoptimized pathfinding properties are not restored.
+                // Overwriting the new Int32Array with a legacy standard Array would crash pathfinding.
+                if (savedEnt.data) {
+                    delete savedEnt.data.moveQueue;
+                    delete savedEnt.data.moveQueueLength;
+                    delete savedEnt.data.moveQueueIndex;
+                }
                 // Assign all data. This overwrites the initialized fields.
                 Object.assign(ent, savedEnt.data);
                 // Fix performance.now() dependent timers that broke due to session restarts

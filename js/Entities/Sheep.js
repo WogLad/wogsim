@@ -77,12 +77,12 @@ class Sheep extends Entity {
                 return Vector2(0, 0);
             }
             var deviation = Vector2(0, 0);
-            if (this.moveQueue.length > this.moveQueueIndex) {
-                deviation.x = this.moveQueue[this.moveQueueIndex].x - currentX;
-                deviation.y = this.moveQueue[this.moveQueueIndex].y - currentY;
+            if (this.moveQueueLength > this.moveQueueIndex) {
+                deviation.x = this.moveQueue[this.moveQueueIndex * 2] - currentX;
+                deviation.y = this.moveQueue[this.moveQueueIndex * 2 + 1] - currentY;
                 this.moveQueueIndex++;
-                if (this.moveQueueIndex >= this.moveQueue.length) {
-                    this.moveQueue.length = 0;
+                if (this.moveQueueIndex >= this.moveQueueLength) {
+                    this.moveQueueLength = 0;
                     this.moveQueueIndex = 0;
                 }
                 return deviation;
