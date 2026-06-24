@@ -27,13 +27,19 @@ function getFBM(x, y, octaves, persistence, lacunarity, scale) {
     return total / maxValue;
 }
 class WorldTile {
-    constructor(x, y) {
+    constructor(x, y, type) {
         this.pos = Vector2(0, 0);
         this.type = TileType.GROUND; // DONE: Should be randomly decided using a noise function
         this.entities = [];
         this.items = []; // DONE: Add objects that exist on tiles such as wheat or trees
         this.worldObjects = [];
-        this.setTileType(x, y); // Sets the type of tile
+        if (type !== undefined) {
+            this.pos = Vector2(x, y);
+            this.type = type;
+        }
+        else {
+            this.setTileType(x, y); // Sets the type of tile
+        }
         this.spawnResources();
     }
     spawnResources() {

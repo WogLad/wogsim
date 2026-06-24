@@ -18,11 +18,13 @@ const BASE_TILE_SIZE = 15;
 var TILE_SIZE = 15;
 const OUTLINE_THICKNESS = 2; // <DEPRECATED> Thickness of the lines that make up the box surrounding the mouse
 // WORLD PROPERTIES
-const X_TILES = 320;
-const Y_TILES = 180;
+const RANDOM_WORLD_SEED = false;
+const X_TILES = 320 * 3;
+const Y_TILES = 180 * 3;
 const WORLD_WIDTH = X_TILES * BASE_TILE_SIZE;
 const WORLD_HEIGHT = Y_TILES * BASE_TILE_SIZE;
 var CAMERA_OFFSET = Vector2(Math.floor(X_TILES / 2) - Math.floor(CANVAS_WIDTH / TILE_SIZE / 2), Math.floor(Y_TILES / 2) - Math.floor(CANVAS_HEIGHT / TILE_SIZE / 2));
+const STARTING_VILLAGE_COUNT = 100;
 var activeStockpile = null;
 var activeStockpileName = "📦 Select a Town Hall to view Stockpile";
 var STORAGE_POS = Vector2(Math.floor(X_TILES / 2), Math.floor(Y_TILES / 2));
@@ -35,7 +37,7 @@ const INVENTORY_MAX_CAPACITY = 20;
 // Village settings and spawn configuration
 var townHallPositions = [];
 var HUMAN_SPAWN_INTERVAL = 100; // Tweak this value to change runtime spawn rate (lower = faster spawn)
-var MAX_ENTITIES_LIMIT = 5000; // Maximum number of concurrent entities in the world to maintain high performance
+var MAX_ENTITIES_LIMIT = 50000; // Maximum number of concurrent entities in the world to maintain high performance
 var RESOURCE_SPAWN_MULTIPLIER = 1.0; // Multiplier for natural resource spawning density
 canvas.height = CANVAS_HEIGHT;
 canvas.width = CANVAS_WIDTH;
@@ -113,11 +115,67 @@ function init() {
     ctx.textAlign = "center";
     ctx.imageSmoothingEnabled = false;
     drawRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT, CANVAS_BG_COLOR);
+    var usePreprocessed = !RANDOM_WORLD_SEED;
+    var decodedTypes = [];
+    if (usePreprocessed) {
+        if (typeof PREPROCESSED_TERRAIN === "undefined") {
+            console.warn("PREPROCESSED_TERRAIN not found! Falling back to random generation.");
+            usePreprocessed = false;
+        }
+        else {
+            let totalTiles = 0;
+            const runs = PREPROCESSED_TERRAIN.split(",");
+            for (let i = 0; i < runs.length; i++) {
+                const parts = runs[i].split("_");
+                if (parts.length === 2) {
+                    totalTiles += parseInt(parts[1]);
+                }
+            }
+            if (totalTiles !== X_TILES * Y_TILES) {
+                console.warn(`PREPROCESSED_TERRAIN size (${totalTiles}) does not match current world size (${X_TILES * Y_TILES}). Falling back to random generation.`);
+                usePreprocessed = false;
+            }
+            else {
+                const TILE_TYPES = [
+                    TileType.DARK_GRASS,
+                    TileType.GRASS,
+                    TileType.GROUND,
+                    TileType.WATER,
+                    TileType.DARK_WATER,
+                    TileType.SAND,
+                    TileType.DESERT,
+                    TileType.SWAMP,
+                    TileType.SNOW
+                ];
+                for (let i = 0; i < runs.length; i++) {
+                    const parts = runs[i].split("_");
+                    const typeIndex = parseInt(parts[0]);
+                    const count = parseInt(parts[1]);
+                    const typeStr = TILE_TYPES[typeIndex];
+                    for (let c = 0; c < count; c++) {
+                        decodedTypes.push(typeStr);
+                    }
+                }
+            }
+        }
+    }
+    if (!usePreprocessed) {
+        if (typeof perlin !== "undefined" && typeof perlin.seed === "function") {
+            perlin.seed();
+        }
+    }
     // Initialise the 2D world array
+    var decodedIdx = 0;
     for (var x = 0; x < X_TILES; x++) {
         world[x] = [];
         for (var y = 0; y < Y_TILES; y++) {
-            var tile = new WorldTile(x, y);
+            var tile;
+            if (usePreprocessed) {
+                tile = new WorldTile(x, y, decodedTypes[decodedIdx++]);
+            }
+            else {
+                tile = new WorldTile(x, y);
+            }
             if (tile.type != TileType.WATER && tile.type != TileType.DARK_WATER) {
                 var spawnRoll = Math.random();
                 if (spawnRoll < 0.0007) { // 0.07% chance to spawn a Sheep
@@ -149,7 +207,7 @@ function init() {
         }
     }
     // Generate 50 village settlements across the map using WASM
-    wasmExports.generateVillagesWasm(10);
+    wasmExports.generateVillagesWasm(STARTING_VILLAGE_COUNT);
     var genSize = wasmExports.getGenBufferSize();
     var genPtr = wasmExports.getGenBufferPointer();
     var genArray = new Int32Array(wasmMemory.buffer, genPtr, genSize * 3);

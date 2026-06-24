@@ -68,7 +68,7 @@ class TestTools {
             entityWoodcutter, entityFisherman, entityMiner, entityFarmer, entitySheep, entityCow, entityWolf,
             resourceTree, resourcePine, resourcePalm, resourceStone, resourceWheat, resourceShrub, resourceCactus
         ];
-        
+
         const selectEntity = (type: any, activeBtn: HTMLElement | null) => {
             this.selectedEntity = type;
             entityButtons.forEach(btn => btn?.classList.remove("active"));
@@ -508,7 +508,7 @@ class TestTools {
             tile.entities = [];
             tile.worldObjects = [];
             tile.items = [];
-            
+
             //@ts-ignore
             if (typeof drawTileToOffscreen === "function") drawTileToOffscreen(x, y);
             this.updateStats();
@@ -621,15 +621,15 @@ class TestTools {
         wheat: number[],
         shrub: number[],
         cactus: number[]
-    } = { 
-        ticks: [], woodcutter: [], fisherman: [], miner: [], farmer: [], sheep: [], cow: [], wolf: [], total: [],
-        avgLifespan: [], avgHungerRate: [], avgSpeed: [],
-        totalGold: [], totalFood: [], totalMaterials: [],
-        avgHealth: [], avgHunger: [], starvationRate: [], homelessnessRate: [],
-        avgAge: [], juvenileRatio: [],
-        working: [], sleeping: [], idle: [], seekingMate: [],
-        tree: [], pine_tree: [], palm_tree: [], fish: [], stone: [], wheat: [], shrub: [], cactus: []
-    };
+    } = {
+            ticks: [], woodcutter: [], fisherman: [], miner: [], farmer: [], sheep: [], cow: [], wolf: [], total: [],
+            avgLifespan: [], avgHungerRate: [], avgSpeed: [],
+            totalGold: [], totalFood: [], totalMaterials: [],
+            avgHealth: [], avgHunger: [], starvationRate: [], homelessnessRate: [],
+            avgAge: [], juvenileRatio: [],
+            working: [], sleeping: [], idle: [], seekingMate: [],
+            tree: [], pine_tree: [], palm_tree: [], fish: [], stone: [], wheat: [], shrub: [], cactus: []
+        };
     static readonly POP_HISTORY_MAX = 600; // Max data points (~30,000 ticks at 50-tick interval)
     static readonly POP_SAMPLE_INTERVAL = 50; // Record every N ticks
     static lastPopSampleTick: number = -1;
@@ -669,7 +669,7 @@ class TestTools {
         }
 
         let csvContent = "Tick,TotalPopulation,Woodcutter,Fisherman,Miner,Farmer,Sheep,Cow,Wolf,AvgLifespan,AvgHungerRate,AvgSpeed,TotalGold,TotalFood,TotalMaterials,AvgHealth,AvgHunger,StarvationRate,HomelessnessRate,AvgAge,JuvenileRatio,Working,Sleeping,Idle,SeekingMate,Trees,Pine,Palm,Fish,Stone,Wheat,Shrub,Cactus\n";
-        
+
         for (let i = 0; i < hist.ticks.length; i++) {
             csvContent += `${hist.ticks[i]},${hist.total[i]},${hist.woodcutter[i]},${hist.fisherman[i]},${hist.miner[i]},${hist.farmer[i]},${hist.sheep[i]},${hist.cow[i]},${hist.wolf[i]},${hist.avgLifespan[i]},${hist.avgHungerRate[i]},${hist.avgSpeed[i]},${hist.totalGold[i]},${hist.totalFood[i]},${hist.totalMaterials[i]},${hist.avgHealth[i]},${hist.avgHunger[i]},${hist.starvationRate[i]},${hist.homelessnessRate[i]},${hist.avgAge[i]},${hist.juvenileRatio[i]},${hist.working[i]},${hist.sleeping[i]},${hist.idle[i]},${hist.seekingMate[i]},${hist.tree[i] || 0},${hist.pine_tree[i] || 0},${hist.palm_tree[i] || 0},${hist.fish[i] || 0},${hist.stone[i] || 0},${hist.wheat[i] || 0},${hist.shrub[i] || 0},${hist.cactus[i] || 0}\n`;
         }
@@ -699,13 +699,13 @@ class TestTools {
         let totalHealth = 0, totalHunger = 0, starvingCount = 0, humansCount = 0, homelessCount = 0;
         let totalAge = 0, juveniles = 0;
         let working = 0, sleeping = 0, idle = 0, seekingMate = 0;
-        
+
         let totalEntities = entities.length;
 
         for (let i = 0; i < totalEntities; i++) {
             const ent = entities[i].entity;
             const name = ent.constructor.name;
-            
+
             // Population
             if (name === "Woodcutter") { w++; humansCount++; }
             else if (name === "Fisherman") { f++; humansCount++; }
@@ -727,7 +727,7 @@ class TestTools {
             totalHealth += ent.health;
             totalHunger += ent.hunger;
             if (ent.hunger > 80) starvingCount++;
-            
+
             // Age
             totalAge += ent.ticksAlive;
             let matureAge = (name === "Sheep" || name === "Cow" || name === "Wolf") ? 2000 : 3000;
@@ -791,7 +791,7 @@ class TestTools {
         h.avgLifespan.push(genomeCount > 0 ? +(sumLifespan / genomeCount).toFixed(2) : 0);
         h.avgHungerRate.push(genomeCount > 0 ? +(sumHungerRate / genomeCount).toFixed(2) : 0);
         h.avgSpeed.push(genomeCount > 0 ? +(sumSpeed / genomeCount).toFixed(2) : 0);
-        
+
         h.totalGold.push(totalGold);
         h.totalFood.push(totalFood);
         h.totalMaterials.push(totalMaterials);
@@ -1652,7 +1652,7 @@ class TestTools {
                 else if (state.includes("Hungry") || state.includes("Starv")) colorClass = "warn";
                 else if (state.includes("Fleeing")) colorClass = "danger";
                 else if (state.includes("Hunting")) colorClass = "info";
-                else if (state.includes("Mate")) colorClass = "purple" ;
+                else if (state.includes("Mate")) colorClass = "purple";
                 else if (state.includes("Gathering") || state.includes("Grazing")) colorClass = "accent";
 
                 html += statLine(state, `${count} (${pct}%)`, colorClass);

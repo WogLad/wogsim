@@ -33,8 +33,13 @@ class WorldTile {
     items: Item[] = []; // DONE: Add objects that exist on tiles such as wheat or trees
     worldObjects: WorldObject[] = [];
 
-    constructor(x: number, y: number) {
-        this.setTileType(x, y); // Sets the type of tile
+    constructor(x: number, y: number, type?: TileType | string) {
+        if (type !== undefined) {
+            this.pos = Vector2(x, y);
+            this.type = type;
+        } else {
+            this.setTileType(x, y); // Sets the type of tile
+        }
         this.spawnResources();
     }
 
